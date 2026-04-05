@@ -46,6 +46,7 @@ declare_lint_rule! {
         language: "ts",
         recommended: false,
         domains: &[RuleDomain::Types],
+        issue_number: Some("9810"),
     }
 }
 

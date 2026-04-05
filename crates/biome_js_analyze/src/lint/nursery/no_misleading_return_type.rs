@@ -674,12 +674,29 @@ fn is_nested_function_like(node: &JsSyntaxNode) -> bool {
     )
 }
 
-fn is_wider_than(annotated: &Type, inferred: &Type, depth: u8) -> bool {
+fn is_wider_than(annotated: &Type, inferred: &Type, mut depth: u8) -> bool {
     if depth > 5 {
         return false;
     }
 
-    match (&**annotated, &**inferred) {
+    let mut current = inferred.clone();
+    while let TypeData::Generic(generic) = &*current {
+        if !generic.constraint.is_known() {
+            return false;
+        }
+        match current.resolve(&generic.constraint) {
+            Some(resolved) => {
+                current = resolved;
+                depth += 1;
+                if depth > 5 {
+                    return false;
+                }
+            }
+            None => return false,
+        }
+    }
+
+    match (&**annotated, &*current) {
         (TypeData::String, TypeData::Literal(lit)) => {
             matches!(lit.as_ref(), Literal::String(_) | Literal::Template(_))
         }
@@ -694,14 +711,14 @@ fn is_wider_than(annotated: &Type, inferred: &Type, depth: u8) -> bool {
         | (TypeData::Boolean, TypeData::Boolean)
         | (TypeData::BigInt, TypeData::BigInt) => false,
 
-        (TypeData::Union(_), _) => is_union_wider(annotated, inferred, depth),
+        (TypeData::Union(_), _) => is_union_wider(annotated, &current, depth),
 
         (TypeData::InstanceOf(ann_inst), TypeData::InstanceOf(inf_inst)) => {
-            is_instance_wider(annotated, ann_inst, inferred, inf_inst, depth)
+            is_instance_wider(annotated, ann_inst, &current, inf_inst, depth)
         }
 
         (TypeData::Object(ann_obj), TypeData::Object(inf_obj)) => {
-            is_object_wider(annotated, ann_obj, inferred, inf_obj, depth)
+            is_object_wider(annotated, ann_obj, &current, inf_obj, depth)
         }
         (TypeData::Object(ann_obj), TypeData::Literal(lit)) => match lit.as_ref() {
             Literal::Object(inf_lit) => {
@@ -709,14 +726,6 @@ fn is_wider_than(annotated: &Type, inferred: &Type, depth: u8) -> bool {
             }
             _ => false,
         },
-
-        (_, TypeData::Generic(generic)) if generic.constraint.is_known() => {
-            if let Some(constraint) = inferred.resolve(&generic.constraint) {
-                is_wider_than(annotated, &constraint, depth + 1)
-            } else {
-                false
-            }
-        }
 
         (TypeData::Unknown, _) | (_, TypeData::Unknown) => false,
         _ => false,

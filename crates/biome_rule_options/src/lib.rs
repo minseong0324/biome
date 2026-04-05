@@ -151,6 +151,7 @@ pub mod no_leaked_render;
 pub mod no_magic_numbers;
 pub mod no_misleading_character_class;
 pub mod no_misleading_instantiator;
+pub mod no_misleading_return_type;
 pub mod no_misplaced_assertion;
 pub mod no_misrefactored_shorthand_assign;
 pub mod no_missing_var_function;

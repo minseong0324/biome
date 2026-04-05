@@ -90,10 +90,12 @@ impl Rule for NoMisleadingReturnType {
             return None;
         }
 
+        // Single literal return: TS widens this to the base type anyway.
         if returns.len() == 1 && !has_any_const_return && is_literal_of_primitive(&returns[0]) {
             return None;
         }
 
+        // true | false === boolean in TS.
         if matches!(&*effective_return_ty, TypeData::Boolean)
             && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if b.as_bool())))
             && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if !b.as_bool())))
@@ -105,6 +107,8 @@ impl Rule for NoMisleadingReturnType {
             return None;
         }
 
+        // Annotation has undefined/void but returns don't - likely an implicit
+        // undefined path we can't detect without CFA.
         if includes_undefined(&effective_return_ty)
             && !returns.iter().any(includes_undefined)
         {
@@ -115,6 +119,7 @@ impl Rule for NoMisleadingReturnType {
             return None;
         }
 
+        // Without as const, contextual typing widens property literals.
         if !has_any_const_return
             && is_only_property_literal_widening(&effective_return_ty, &returns, 0)
         {
@@ -269,6 +274,8 @@ fn is_literal_of_primitive(ty: &Type) -> bool {
     matches!(&**ty, TypeData::Literal(lit) if lit.is_primitive())
 }
 
+/// Checks whether annotation differs from returns only by property-level
+/// literal widening that contextual typing would handle.
 fn is_only_property_literal_widening(annotation: &Type, returns: &[Type], depth: u8) -> bool {
     if depth > 3 {
         return false;
@@ -438,6 +445,7 @@ fn build_inferred_description(returns: &[Type], _annotation: &Type) -> String {
     result
 }
 
+/// Collects return types and tracks `as const` usage from a function body.
 fn collect_return_info(
     ctx: &RuleContext<NoMisleadingReturnType>,
     body: &AnyJsFunctionBody,
@@ -674,6 +682,7 @@ fn is_nested_function_like(node: &JsSyntaxNode) -> bool {
     )
 }
 
+/// Checks whether `annotated` is strictly wider than `inferred`.
 fn is_wider_than(annotated: &Type, inferred: &Type, mut depth: u8) -> bool {
     if depth > 5 {
         return false;
@@ -732,6 +741,7 @@ fn is_wider_than(annotated: &Type, inferred: &Type, mut depth: u8) -> bool {
     }
 }
 
+/// Checks whether a union annotation is wider than a set of return types.
 fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
     let all_covered = returns.iter().all(|ret| {
         annotated
@@ -797,6 +807,7 @@ fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {
         })
 }
 
+/// Checks structural equality between two types.
 fn types_match(a: &Type, b: &Type) -> bool {
     let mut a = a.clone();
     let mut b = b.clone();

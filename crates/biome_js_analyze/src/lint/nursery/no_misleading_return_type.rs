@@ -6,7 +6,7 @@ use biome_js_syntax::{
     TsTypeAssertionExpression,
 };
 use biome_js_type_info::{Literal, Type, TypeData};
-use biome_rowan::{AstNode, TextRange};
+use biome_rowan::{AstNode, TextRange, TokenText};
 use biome_rule_options::no_misleading_return_type::NoMisleadingReturnTypeOptions;
 
 use crate::services::typed::Typed;
@@ -171,7 +171,7 @@ fn is_overload_implementation(node: &AnyJsFunction) -> bool {
         .binding()
         .and_then(|b| b.as_js_identifier_binding().cloned())
         .and_then(|id| id.name_token().ok())
-        .map(|t| t.text_trimmed().to_string());
+        .map(|t| t.token_text_trimmed());
     let Some(name) = name else { return false };
 
     let Some(parent) = node.syntax().parent() else {
@@ -189,7 +189,7 @@ fn is_overload_implementation(node: &AnyJsFunction) -> bool {
                 .ok()
                 .and_then(|id| id.as_js_identifier_binding().cloned())
                 .and_then(|id| id.name_token().ok())
-                .is_some_and(|t| t.text_trimmed() == name);
+                .is_some_and(|t| t.token_text_trimmed() == name);
         }
         AnyJsFunction::cast(sibling).is_some_and(|sib_fn| {
             sib_fn.body().is_err()
@@ -197,7 +197,7 @@ fn is_overload_implementation(node: &AnyJsFunction) -> bool {
                     .binding()
                     .and_then(|b| b.as_js_identifier_binding().cloned())
                     .and_then(|id| id.name_token().ok())
-                    .is_some_and(|t| t.text_trimmed() == name)
+                    .is_some_and(|t| t.token_text_trimmed() == name)
         })
     })
 }
@@ -399,32 +399,33 @@ fn is_base_type_of_literal(base: &Type, literal: &Type) -> bool {
 }
 
 fn build_inferred_description(returns: &[Type], _annotation: &Type) -> String {
-    let candidates = returns;
-
-    let mut parts: Vec<String> = Vec::new();
-    for ty in candidates {
+    let mut result = String::new();
+    for ty in returns {
         match &**ty {
-            TypeData::Literal(lit) => match lit.as_ref() {
-                Literal::String(s) => {
-                    parts.push(format!("\"{}\"", s.as_str()));
+            TypeData::Literal(lit) => {
+                if !result.is_empty() {
+                    result.push_str(" | ");
                 }
-                Literal::Number(n) => {
-                    parts.push(n.as_str().to_string());
+                match lit.as_ref() {
+                    Literal::String(s) => {
+                        result.push('"');
+                        result.push_str(s.as_str());
+                        result.push('"');
+                    }
+                    Literal::Number(n) => result.push_str(n.as_str()),
+                    Literal::Boolean(b) => {
+                        result.push_str(if b.as_bool() { "true" } else { "false" })
+                    }
+                    _ => return String::new(),
                 }
-                Literal::Boolean(b) => {
-                    parts.push(if b.as_bool() { "true" } else { "false" }.to_string());
-                }
-                _ => return String::new(),
-            },
+            }
             _ => return String::new(),
         }
     }
 
-    if parts.is_empty() {
+    if result.is_empty() {
         return String::new();
     }
-
-    let result = parts.join(" | ");
 
     if result.contains("...") || result.contains("__internal") || result.contains("typeof import(") {
         return String::new();
@@ -512,7 +513,7 @@ fn resolve_identifier_initializer_type(
         .name()
         .ok()
         .and_then(|n| n.value_token().ok())
-        .map(|t| t.text_trimmed().to_string())?;
+        .map(|t| t.token_text_trimmed())?;
 
     let body_node = id_expr
         .syntax()
@@ -534,7 +535,7 @@ fn resolve_identifier_initializer_type(
                 .and_then(|id| id.as_any_js_binding().cloned())
                 .and_then(|b| b.as_js_identifier_binding().cloned())
                 .and_then(|ib| ib.name_token().ok())
-                .map(|t| t.text_trimmed().to_string());
+                .map(|t| t.token_text_trimmed());
             let Some(id_text) = id_text else { continue };
             if id_text != name {
                 continue;
@@ -595,7 +596,7 @@ fn identifier_refers_to_const_assertion(
         .name()
         .ok()
         .and_then(|n| n.value_token().ok())
-        .map(|t| t.text_trimmed().to_string());
+        .map(|t| t.token_text_trimmed());
     let Some(name) = name else { return false };
 
     let enclosing_body = id_expr
@@ -623,17 +624,17 @@ fn identifier_refers_to_const_assertion(
     })
 }
 
-fn declarator_matches_name_with_const(declarator: &JsVariableDeclarator, name: &str) -> bool {
+fn declarator_matches_name_with_const(declarator: &JsVariableDeclarator, name: &TokenText) -> bool {
     let id_text = declarator
         .id()
         .ok()
         .and_then(|id| id.as_any_js_binding().cloned())
         .and_then(|b| b.as_js_identifier_binding().cloned())
         .and_then(|ib| ib.name_token().ok())
-        .map(|t| t.text_trimmed().to_string());
+        .map(|t| t.token_text_trimmed());
     let Some(id_text) = id_text else { return false };
 
-    if id_text != name {
+    if id_text != *name {
         return false;
     }
 

@@ -37,3 +37,5 @@ function asConstVar(): string {
 function recordWider(): Record<string, string> {
     return { a: "x", b: "y" } as const;
 }
+
+function nullable(flag: boolean): string | null { if (flag) return "yes"; return null; }

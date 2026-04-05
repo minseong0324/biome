@@ -44,6 +44,8 @@ function recordWider(): Record<string, string> {
     return { a: "x", b: "y" } as const;
 }
 
+function nullable(flag: boolean): string | null { if (flag) return "yes"; return null; }
+
 ```
 
 # Diagnostics
@@ -384,6 +386,24 @@ invalid.ts:37:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━
        │                       ^^^^^^^^^^^^^^^^^^^^^^^^
     38 │     return { a: "x", b: "y" } as const;
     39 │ }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:41:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    39 │ }
+    40 │ 
+  > 41 │ function nullable(flag: boolean): string | null { if (flag) return "yes"; return null; }
+       │                                 ^^^^^^^^^^^^^^^
+    42 │ 
   
   i A wider return type hides the precise types that callers could rely on.
   

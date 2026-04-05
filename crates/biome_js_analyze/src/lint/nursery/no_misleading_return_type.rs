@@ -743,11 +743,19 @@ fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
         return false;
     }
 
-    ann_variants.iter().any(|ann_v| {
+    let has_extra = ann_variants.iter().any(|ann_v| {
         !returns.iter().any(|ret| {
             types_match(ann_v, ret) || is_wider_than(ann_v, ret, 0)
         })
-    })
+    });
+
+    let has_wider_variant = ann_variants.iter().any(|ann_v| {
+        returns
+            .iter()
+            .any(|ret| is_wider_than(ann_v, ret, 0))
+    });
+
+    has_extra || has_wider_variant
 }
 
 fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {

@@ -398,14 +398,11 @@ fn is_base_type_of_literal(base: &Type, literal: &Type) -> bool {
     }
 }
 
-fn build_inferred_description(returns: &[Type], annotation: &Type) -> String {
-    let candidates: Vec<Type> = match &**annotation {
-        TypeData::Union(_) => annotation.flattened_union_variants().collect(),
-        _ => returns.to_vec(),
-    };
+fn build_inferred_description(returns: &[Type], _annotation: &Type) -> String {
+    let candidates = returns;
 
     let mut parts: Vec<String> = Vec::new();
-    for ty in &candidates {
+    for ty in candidates {
         match &**ty {
             TypeData::Literal(lit) => match lit.as_ref() {
                 Literal::String(s) => {

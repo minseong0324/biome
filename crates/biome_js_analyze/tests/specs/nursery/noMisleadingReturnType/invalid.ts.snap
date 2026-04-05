@@ -286,7 +286,7 @@ invalid.ts:22:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "a" | "b" | "c".
+  i The inferred return type is narrower: "b" | "a".
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   

@@ -132,7 +132,7 @@ impl Rule for NoMisleadingReturnType {
         } else {
             returns
                 .iter()
-                .all(|inferred| is_wider_than(&effective_return_ty, inferred, 0))
+                .all(|inferred| is_wider_than(&effective_return_ty, inferred))
         };
 
         if !is_misleading {
@@ -694,30 +694,27 @@ fn is_nested_function_like(node: &JsSyntaxNode) -> bool {
     )
 }
 
-/// Checks whether `annotated` is strictly wider than `inferred`.
-fn is_wider_than(annotated: &Type, inferred: &Type, mut depth: u8) -> bool {
-    if depth > 5 {
-        return false;
-    }
-
-    let mut current = inferred.clone();
+/// Follows generic constraints iteratively: `T extends U extends string` → `string`.
+fn resolve_generic_chain(ty: &Type) -> Type {
+    let mut current = ty.clone();
+    let mut steps = 0u8;
     while let TypeData::Generic(generic) = &*current {
-        if !generic.constraint.is_known() {
-            return false;
+        if steps > 5 || !generic.constraint.is_known() {
+            break;
         }
         match current.resolve(&generic.constraint) {
             Some(resolved) => {
                 current = resolved;
-                depth += 1;
-                if depth > 5 {
-                    return false;
-                }
+                steps += 1;
             }
-            None => return false,
+            None => break,
         }
     }
+    current
+}
 
-    match (&**annotated, &*current) {
+fn is_leaf_wider(annotated: &Type, inferred: &Type) -> bool {
+    match (&**annotated, &**inferred) {
         (TypeData::String, TypeData::Literal(lit)) => {
             matches!(lit.as_ref(), Literal::String(_) | Literal::Template(_))
         }
@@ -726,30 +723,164 @@ fn is_wider_than(annotated: &Type, inferred: &Type, mut depth: u8) -> bool {
             matches!(lit.as_ref(), Literal::Boolean(_))
         }
         (TypeData::BigInt, TypeData::Literal(lit)) => matches!(lit.as_ref(), Literal::BigInt(_)),
+        _ => false,
+    }
+}
 
+/// Compares non-union type pairs using a work stack. Compound types
+/// (Instance params, Object properties) are decomposed into sub-pairs
+/// and pushed back onto the stack for further comparison.
+fn is_nonunion_wider(annotated: &Type, inferred: &Type) -> bool {
+    let mut stack: Vec<(Type, Type)> =
+        vec![(annotated.clone(), resolve_generic_chain(inferred))];
+    let mut found_wider = false;
+    let mut iterations = 0usize;
+
+    while let Some((ann, inf)) = stack.pop() {
+        iterations += 1;
+        if iterations > 50 {
+            return false;
+        }
+
+        if is_leaf_wider(&ann, &inf) {
+            found_wider = true;
+            continue;
+        }
+
+        if types_match(&ann, &inf) {
+            continue;
+        }
+
+        match (&*ann, &*inf) {
+            (TypeData::InstanceOf(ann_inst), TypeData::InstanceOf(inf_inst)) => {
+                let same_base = match (ann.resolve(&ann_inst.ty), inf.resolve(&inf_inst.ty)) {
+                    (Some(a), Some(b)) => types_match(&a, &b),
+                    _ => false,
+                };
+                if !same_base {
+                    return false;
+                }
+                let ann_params = &ann_inst.type_parameters;
+                let inf_params = &inf_inst.type_parameters;
+                if ann_params.len() != inf_params.len() || ann_params.is_empty() {
+                    return false;
+                }
+                for (ann_p, inf_p) in ann_params.iter().zip(inf_params.iter()) {
+                    match (ann.resolve(ann_p), inf.resolve(inf_p)) {
+                        (Some(a), Some(b)) => stack.push((a, resolve_generic_chain(&b))),
+                        _ => return false,
+                    }
+                }
+            }
+
+            (TypeData::Object(ann_obj), TypeData::Object(inf_obj)) => {
+                if !push_object_pairs(&ann, ann_obj, &inf, inf_obj, &mut stack) {
+                    return false;
+                }
+            }
+
+            (TypeData::Object(ann_obj), TypeData::Literal(lit)) => match lit.as_ref() {
+                Literal::Object(inf_lit) => {
+                    if !push_object_literal_pairs(&ann, ann_obj, inf_lit, &mut stack) {
+                        return false;
+                    }
+                }
+                _ => return false,
+            },
+
+            _ => return false,
+        }
+    }
+
+    found_wider
+}
+
+/// Pushes property type pairs onto the work stack for pairwise comparison.
+/// Also handles index signatures, which arise from `Record<K,V>` annotations.
+fn push_object_pairs(
+    annotated: &Type,
+    ann_obj: &biome_js_type_info::Object,
+    inferred: &Type,
+    inf_obj: &biome_js_type_info::Object,
+    stack: &mut Vec<(Type, Type)>,
+) -> bool {
+    if ann_obj.members.is_empty() || inf_obj.members.is_empty() {
+        return false;
+    }
+
+    let ann_index_sig = ann_obj.members.iter().find(|m| {
+        matches!(m.kind, biome_js_type_info::TypeMemberKind::IndexSignature(_))
+    });
+    if let Some(sig_member) = ann_index_sig
+        && let Some(sig_value_ty) = annotated.resolve(&sig_member.ty)
+    {
+        for inf_m in inf_obj.members.iter() {
+            match inferred.resolve(&inf_m.ty) {
+                Some(inf_ty) => stack.push((sig_value_ty.clone(), resolve_generic_chain(&inf_ty))),
+                None => return false,
+            }
+        }
+        return true;
+    }
+
+    for ann_member in ann_obj.members.iter() {
+        let ann_name = match &ann_member.kind {
+            biome_js_type_info::TypeMemberKind::Named(name) => name,
+            _ => continue,
+        };
+        let inf_member = inf_obj.members.iter().find(|m| m.kind.has_name(ann_name));
+        let Some(inf_member) = inf_member else {
+            return false;
+        };
+        match (annotated.resolve(&ann_member.ty), inferred.resolve(&inf_member.ty)) {
+            (Some(a), Some(b)) => stack.push((a, resolve_generic_chain(&b))),
+            _ => return false,
+        }
+    }
+
+    true
+}
+
+fn push_object_literal_pairs(
+    annotated: &Type,
+    ann_obj: &biome_js_type_info::Object,
+    inf_lit: &biome_js_type_info::ObjectLiteral,
+    stack: &mut Vec<(Type, Type)>,
+) -> bool {
+    if ann_obj.members.is_empty() || inf_lit.members().is_empty() {
+        return false;
+    }
+
+    for ann_member in ann_obj.members.iter() {
+        let ann_name = match &ann_member.kind {
+            biome_js_type_info::TypeMemberKind::Named(name) => name,
+            _ => continue,
+        };
+        let inf_member = inf_lit.members().iter().find(|m| m.kind.has_name(ann_name));
+        let Some(inf_member) = inf_member else {
+            return false;
+        };
+        match (annotated.resolve(&ann_member.ty), annotated.resolve(&inf_member.ty)) {
+            (Some(a), Some(b)) => stack.push((a, resolve_generic_chain(&b))),
+            _ => return false,
+        }
+    }
+
+    true
+}
+
+/// Checks whether `annotated` is strictly wider than `inferred`.
+fn is_wider_than(annotated: &Type, inferred: &Type) -> bool {
+    let current = resolve_generic_chain(inferred);
+
+    match (&**annotated, &*current) {
         (TypeData::String, TypeData::String)
         | (TypeData::Number, TypeData::Number)
         | (TypeData::Boolean, TypeData::Boolean)
         | (TypeData::BigInt, TypeData::BigInt) => false,
 
-        (TypeData::Union(_), _) => is_union_wider(annotated, &current, depth),
-
-        (TypeData::InstanceOf(ann_inst), TypeData::InstanceOf(inf_inst)) => {
-            is_instance_wider(annotated, ann_inst, &current, inf_inst, depth)
-        }
-
-        (TypeData::Object(ann_obj), TypeData::Object(inf_obj)) => {
-            is_object_wider(annotated, ann_obj, &current, inf_obj, depth)
-        }
-        (TypeData::Object(ann_obj), TypeData::Literal(lit)) => match lit.as_ref() {
-            Literal::Object(inf_lit) => {
-                is_object_wider_than_literal(annotated, ann_obj, inf_lit, depth)
-            }
-            _ => false,
-        },
-
-        (TypeData::Unknown, _) | (_, TypeData::Unknown) => false,
-        _ => false,
+        (TypeData::Union(_), _) => is_union_wider(annotated, &current),
+        _ => is_nonunion_wider(annotated, &current),
     }
 }
 
@@ -758,7 +889,7 @@ fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
     let all_covered = returns.iter().all(|ret| {
         annotated
             .flattened_union_variants()
-            .any(|ann_v| types_match(&ann_v, ret) || is_wider_than(&ann_v, ret, 0))
+            .any(|ann_v| types_match(&ann_v, ret) || is_nonunion_wider(&ann_v, ret))
     });
 
     if !all_covered {
@@ -768,12 +899,12 @@ fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
     let has_extra = annotated.flattened_union_variants().any(|ann_v| {
         !returns
             .iter()
-            .any(|ret| types_match(&ann_v, ret) || is_wider_than(&ann_v, ret, 0))
+            .any(|ret| types_match(&ann_v, ret) || is_nonunion_wider(&ann_v, ret))
     });
 
     let has_wider_variant = annotated
         .flattened_union_variants()
-        .any(|ann_v| returns.iter().any(|ret| is_wider_than(&ann_v, ret, 0)));
+        .any(|ann_v| returns.iter().any(|ret| is_nonunion_wider(&ann_v, ret)));
 
     has_extra || has_wider_variant
 }
@@ -781,7 +912,7 @@ fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
 /// Like `is_union_wider_than_returns` but for a single inferred type (used
 /// inside `is_wider_than`). Also filters out generic variants whose
 /// constraints are subsumed by other variants in the annotation union.
-fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {
+fn is_union_wider(annotated: &Type, inferred: &Type) -> bool {
     let ann_variants: Vec<Type> = annotated.flattened_union_variants().collect();
 
     let inf_variants: Vec<Type> = match &**inferred {
@@ -790,9 +921,9 @@ fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {
     };
 
     let all_inferred_covered = inf_variants.iter().all(|inf_v| {
-        ann_variants.iter().any(|ann_v| {
-            types_match(ann_v, inf_v) || is_wider_than(ann_v, inf_v, depth + 1)
-        })
+        ann_variants
+            .iter()
+            .any(|ann_v| types_match(ann_v, inf_v) || is_nonunion_wider(ann_v, inf_v))
     });
 
     if !all_inferred_covered {
@@ -809,16 +940,16 @@ fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {
                 let subsumed = ann_variants.iter().any(|other| {
                     !std::ptr::eq(*ann_v as *const Type, other as *const Type)
                         && (types_match(other, &constraint)
-                            || is_wider_than(other, &constraint, depth + 1))
+                            || is_nonunion_wider(other, &constraint))
                 });
                 return !subsumed;
             }
             true
         })
         .any(|ann_v| {
-            !inf_variants.iter().any(|inf_v| {
-                types_match(ann_v, inf_v) || is_wider_than(ann_v, inf_v, depth + 1)
-            })
+            !inf_variants
+                .iter()
+                .any(|inf_v| types_match(ann_v, inf_v) || is_nonunion_wider(ann_v, inf_v))
         })
 }
 
@@ -879,149 +1010,4 @@ fn types_match(a: &Type, b: &Type) -> bool {
             _ => return false,
         }
     }
-}
-
-fn is_instance_wider(
-    annotated: &Type,
-    ann_inst: &biome_js_type_info::TypeInstance,
-    inferred: &Type,
-    inf_inst: &biome_js_type_info::TypeInstance,
-    depth: u8,
-) -> bool {
-    let ann_base = annotated.resolve(&ann_inst.ty);
-    let inf_base = inferred.resolve(&inf_inst.ty);
-    let same_base = match (&ann_base, &inf_base) {
-        (Some(a), Some(b)) => types_match(a, b),
-        _ => false,
-    };
-    if !same_base {
-        return false;
-    }
-
-    let ann_params = &ann_inst.type_parameters;
-    let inf_params = &inf_inst.type_parameters;
-    if ann_params.len() != inf_params.len() || ann_params.is_empty() {
-        return false;
-    }
-
-    ann_params
-        .iter()
-        .zip(inf_params.iter())
-        .any(|(ann_p, inf_p)| match (annotated.resolve(ann_p), inferred.resolve(inf_p)) {
-            (Some(a), Some(b)) => is_wider_than(&a, &b, depth + 1),
-            _ => false,
-        })
-}
-
-/// Compares object members pairwise. Also handles index signatures, which
-/// arise from `Record<K,V>` annotations.
-fn is_object_wider(
-    annotated: &Type,
-    ann_obj: &biome_js_type_info::Object,
-    inferred: &Type,
-    inf_obj: &biome_js_type_info::Object,
-    depth: u8,
-) -> bool {
-    if ann_obj.members.is_empty() || inf_obj.members.is_empty() {
-        return false;
-    }
-
-    let ann_index_sig = ann_obj.members.iter().find(|m| {
-        matches!(m.kind, biome_js_type_info::TypeMemberKind::IndexSignature(_))
-    });
-    if let Some(sig_member) = ann_index_sig
-        && let Some(sig_value_ty) = annotated.resolve(&sig_member.ty) {
-            let all_narrower = inf_obj.members.iter().all(|inf_m| {
-                if let Some(inf_ty) = inferred.resolve(&inf_m.ty) {
-                    is_wider_than(&sig_value_ty, &inf_ty, depth + 1) || types_match(&sig_value_ty, &inf_ty)
-                } else {
-                    false
-                }
-            });
-            let any_wider = inf_obj.members.iter().any(|inf_m| {
-                inferred.resolve(&inf_m.ty).is_some_and(|inf_ty| {
-                    is_wider_than(&sig_value_ty, &inf_ty, depth + 1)
-                })
-            });
-            if all_narrower && any_wider {
-                return true;
-            }
-        }
-
-    let mut has_any_wider = false;
-
-    for ann_member in ann_obj.members.iter() {
-        let ann_name = match &ann_member.kind {
-            biome_js_type_info::TypeMemberKind::Named(name) => name,
-            _ => continue,
-        };
-
-        let inf_member = inf_obj.members.iter().find(|m| m.kind.has_name(ann_name));
-        let Some(inf_member) = inf_member else {
-            return false;
-        };
-
-        let ann_prop_ty = annotated.resolve(&ann_member.ty);
-        let inf_prop_ty = inferred.resolve(&inf_member.ty);
-
-        match (ann_prop_ty, inf_prop_ty) {
-            (Some(a), Some(b)) => {
-                if types_match(&a, &b) {
-                    continue;
-                }
-                if is_wider_than(&a, &b, depth + 1) {
-                    has_any_wider = true;
-                } else {
-                    return false;
-                }
-            }
-            _ => return false,
-        }
-    }
-
-    has_any_wider
-}
-
-fn is_object_wider_than_literal(
-    annotated: &Type,
-    ann_obj: &biome_js_type_info::Object,
-    inf_lit: &biome_js_type_info::ObjectLiteral,
-    depth: u8,
-) -> bool {
-    if ann_obj.members.is_empty() || inf_lit.members().is_empty() {
-        return false;
-    }
-
-    let mut has_any_wider = false;
-
-    for ann_member in ann_obj.members.iter() {
-        let ann_name = match &ann_member.kind {
-            biome_js_type_info::TypeMemberKind::Named(name) => name,
-            _ => continue,
-        };
-
-        let inf_member = inf_lit.members().iter().find(|m| m.kind.has_name(ann_name));
-        let Some(inf_member) = inf_member else {
-            return false;
-        };
-
-        let ann_prop_ty = annotated.resolve(&ann_member.ty);
-        let inf_prop_ty = annotated.resolve(&inf_member.ty);
-
-        match (ann_prop_ty, inf_prop_ty) {
-            (Some(a), Some(b)) => {
-                if types_match(&a, &b) {
-                    continue;
-                }
-                if is_wider_than(&a, &b, depth + 1) {
-                    has_any_wider = true;
-                } else {
-                    return false;
-                }
-            }
-            _ => return false,
-        }
-    }
-
-    has_any_wider
 }

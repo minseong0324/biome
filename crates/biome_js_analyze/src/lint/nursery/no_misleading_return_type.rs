@@ -465,26 +465,21 @@ fn collect_block_returns(
     has_any_const: &mut bool,
 ) -> Vec<Type> {
     let mut returns = Vec::new();
-    let mut stack: Vec<JsSyntaxNode> = vec![block.syntax().clone()];
 
-    while let Some(node) = stack.pop() {
-        for child in node.children() {
-            if is_nested_function_like(&child) {
-                continue;
+    for node in block
+        .syntax()
+        .pruned_descendents(|n| !is_nested_function_like(n))
+    {
+        let Some(ret) = JsReturnStatement::cast(node) else {
+            continue;
+        };
+        if let Some(arg) = ret.argument()
+            && let Some(expr) = AnyJsExpression::cast(arg.syntax().clone())
+        {
+            if has_const_assertion(&expr) {
+                *has_any_const = true;
             }
-
-            if let Some(ret) = JsReturnStatement::cast(child.clone()) {
-                if let Some(arg) = ret.argument()
-                    && let Some(expr) = AnyJsExpression::cast(arg.syntax().clone()) {
-                        if has_const_assertion(&expr) {
-                            *has_any_const = true;
-                        }
-                        returns.push(infer_expression_type(ctx, &expr));
-                    }
-                continue;
-            }
-
-            stack.push(child);
+            returns.push(infer_expression_type(ctx, &expr));
         }
     }
 

@@ -172,6 +172,10 @@ impl Rule for NoMisleadingReturnType {
 
 }
 
+/// Looks for sibling function declarations with the same name but no body,
+/// which indicates this function is the implementation of an overload set.
+/// Overload signatures are parsed as `TsDeclareFunctionDeclaration` or as
+/// `AnyJsFunction` with `body().is_err()`.
 fn is_overload_implementation(node: &AnyJsFunction) -> bool {
     let name = node
         .binding()
@@ -230,6 +234,8 @@ fn is_escape_hatch(ty: &Type) -> bool {
     )
 }
 
+/// For async functions the annotation is `Promise<T>`. We need `T` to compare
+/// against the return expressions, which are not wrapped in `Promise`.
 fn unwrap_promise_inner(return_ty: &Type) -> Type {
     if let TypeData::InstanceOf(instance) = &**return_ty
         && let Some(inner_ref) = instance.type_parameters.first()
@@ -406,6 +412,8 @@ fn is_base_type_of_literal(base: &Type, literal: &Type) -> bool {
     }
 }
 
+/// Builds a string like `"loading" | "idle"` for the diagnostic note.
+/// Returns empty if any return type isn't a simple literal.
 fn build_inferred_description(returns: &[Type], _annotation: &Type) -> String {
     let mut result = String::new();
     for ty in returns {
@@ -495,6 +503,9 @@ fn collect_block_returns(
     returns
 }
 
+/// Gets the type of a return expression. For identifiers bound to an
+/// `as const` initializer, walks the AST to find the original literal type
+/// since `type_of_expression` would return the widened type.
 fn infer_expression_type(
     ctx: &RuleContext<NoMisleadingReturnType>,
     expr: &AnyJsExpression,
@@ -767,6 +778,9 @@ fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
     has_extra || has_wider_variant
 }
 
+/// Like `is_union_wider_than_returns` but for a single inferred type (used
+/// inside `is_wider_than`). Also filters out generic variants whose
+/// constraints are subsumed by other variants in the annotation union.
 fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {
     let ann_variants: Vec<Type> = annotated.flattened_union_variants().collect();
 
@@ -899,6 +913,8 @@ fn is_instance_wider(
         })
 }
 
+/// Compares object members pairwise. Also handles index signatures, which
+/// arise from `Record<K,V>` annotations.
 fn is_object_wider(
     annotated: &Type,
     ann_obj: &biome_js_type_info::Object,

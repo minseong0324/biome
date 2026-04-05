@@ -724,50 +724,36 @@ fn is_wider_than(annotated: &Type, inferred: &Type, depth: u8) -> bool {
 }
 
 fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
-    let ann_variants: Vec<Type> = annotated.flattened_union_variants().collect();
-    if ann_variants.is_empty() {
-        return false;
-    }
-
     let all_covered = returns.iter().all(|ret| {
-        ann_variants
-            .iter()
-            .any(|ann_v| types_match(ann_v, ret) || is_wider_than(ann_v, ret, 0))
+        annotated
+            .flattened_union_variants()
+            .any(|ann_v| types_match(&ann_v, ret) || is_wider_than(&ann_v, ret, 0))
     });
 
     if !all_covered {
         return false;
     }
 
-    let has_extra = ann_variants.iter().any(|ann_v| {
-        !returns.iter().any(|ret| {
-            types_match(ann_v, ret) || is_wider_than(ann_v, ret, 0)
-        })
+    let has_extra = annotated.flattened_union_variants().any(|ann_v| {
+        !returns
+            .iter()
+            .any(|ret| types_match(&ann_v, ret) || is_wider_than(&ann_v, ret, 0))
     });
 
-    let has_wider_variant = ann_variants.iter().any(|ann_v| {
-        returns
-            .iter()
-            .any(|ret| is_wider_than(ann_v, ret, 0))
-    });
+    let has_wider_variant = annotated
+        .flattened_union_variants()
+        .any(|ann_v| returns.iter().any(|ret| is_wider_than(&ann_v, ret, 0)));
 
     has_extra || has_wider_variant
 }
 
 fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {
     let ann_variants: Vec<Type> = annotated.flattened_union_variants().collect();
-    if ann_variants.is_empty() {
-        return false;
-    }
 
     let inf_variants: Vec<Type> = match &**inferred {
         TypeData::Union(_) => inferred.flattened_union_variants().collect(),
         _ => vec![inferred.clone()],
     };
-
-    if inf_variants.is_empty() {
-        return false;
-    }
 
     let all_inferred_covered = inf_variants.iter().all(|inf_v| {
         ann_variants.iter().any(|ann_v| {
@@ -779,76 +765,84 @@ fn is_union_wider(annotated: &Type, inferred: &Type, depth: u8) -> bool {
         return false;
     }
 
-    let effective_ann_variants: Vec<&Type> = ann_variants
+    ann_variants
         .iter()
         .filter(|ann_v| {
             if let TypeData::Generic(generic) = &***ann_v
                 && generic.constraint.is_known()
-                    && let Some(constraint) = ann_v.resolve(&generic.constraint) {
-                        let subsumed = ann_variants.iter().any(|other| {
-                            !std::ptr::eq(*ann_v as *const Type, other as *const Type)
-                                && (types_match(other, &constraint)
-                                    || is_wider_than(other, &constraint, depth + 1))
-                        });
-                        return !subsumed;
-                    }
+                && let Some(constraint) = ann_v.resolve(&generic.constraint)
+            {
+                let subsumed = ann_variants.iter().any(|other| {
+                    !std::ptr::eq(*ann_v as *const Type, other as *const Type)
+                        && (types_match(other, &constraint)
+                            || is_wider_than(other, &constraint, depth + 1))
+                });
+                return !subsumed;
+            }
             true
         })
-        .collect();
-
-    effective_ann_variants.iter().any(|ann_v| {
-        !inf_variants.iter().any(|inf_v| {
-            types_match(ann_v, inf_v) || is_wider_than(ann_v, inf_v, depth + 1)
+        .any(|ann_v| {
+            !inf_variants.iter().any(|inf_v| {
+                types_match(ann_v, inf_v) || is_wider_than(ann_v, inf_v, depth + 1)
+            })
         })
-    })
 }
 
 fn types_match(a: &Type, b: &Type) -> bool {
-    match (&**a, &**b) {
-        (TypeData::String, TypeData::String)
-        | (TypeData::Number, TypeData::Number)
-        | (TypeData::Boolean, TypeData::Boolean)
-        | (TypeData::BigInt, TypeData::BigInt)
-        | (TypeData::Null, TypeData::Null)
-        | (TypeData::Undefined, TypeData::Undefined)
-        | (TypeData::VoidKeyword, TypeData::VoidKeyword)
-        | (TypeData::NeverKeyword, TypeData::NeverKeyword) => true,
+    let mut a = a.clone();
+    let mut b = b.clone();
+    loop {
+        match (&*a, &*b) {
+            (TypeData::String, TypeData::String)
+            | (TypeData::Number, TypeData::Number)
+            | (TypeData::Boolean, TypeData::Boolean)
+            | (TypeData::BigInt, TypeData::BigInt)
+            | (TypeData::Null, TypeData::Null)
+            | (TypeData::Undefined, TypeData::Undefined)
+            | (TypeData::VoidKeyword, TypeData::VoidKeyword)
+            | (TypeData::NeverKeyword, TypeData::NeverKeyword) => return true,
 
-        (TypeData::Literal(a_lit), TypeData::Literal(b_lit)) => a_lit == b_lit,
+            (TypeData::Literal(a_lit), TypeData::Literal(b_lit)) => return a_lit == b_lit,
 
-        (TypeData::Generic(a_gen), TypeData::Generic(b_gen)) => a_gen.name == b_gen.name,
-
-        (TypeData::InstanceOf(a_inst), TypeData::InstanceOf(b_inst))
-            if a_inst.type_parameters.is_empty() && b_inst.type_parameters.is_empty() =>
-        {
-            let a_base = a.resolve(&a_inst.ty);
-            let b_base = b.resolve(&b_inst.ty);
-            match (a_base, b_base) {
-                (Some(a_base), Some(b_base)) => types_match(&a_base, &b_base),
-                _ => false,
+            (TypeData::Generic(a_gen), TypeData::Generic(b_gen)) => {
+                return a_gen.name == b_gen.name
             }
-        }
 
-        (TypeData::Generic(a_gen), TypeData::InstanceOf(b_inst))
-            if b_inst.type_parameters.is_empty() =>
-        {
-            if let Some(base) = b.resolve(&b_inst.ty)
-                && let TypeData::Generic(b_gen) = &*base {
+            (TypeData::InstanceOf(a_inst), TypeData::InstanceOf(b_inst))
+                if a_inst.type_parameters.is_empty() && b_inst.type_parameters.is_empty() =>
+            {
+                match (a.resolve(&a_inst.ty), b.resolve(&b_inst.ty)) {
+                    (Some(a_base), Some(b_base)) => {
+                        a = a_base;
+                        b = b_base;
+                    }
+                    _ => return false,
+                }
+            }
+
+            (TypeData::Generic(a_gen), TypeData::InstanceOf(b_inst))
+                if b_inst.type_parameters.is_empty() =>
+            {
+                if let Some(base) = b.resolve(&b_inst.ty)
+                    && let TypeData::Generic(b_gen) = &*base
+                {
                     return a_gen.name == b_gen.name;
                 }
-            false
-        }
-        (TypeData::InstanceOf(a_inst), TypeData::Generic(b_gen))
-            if a_inst.type_parameters.is_empty() =>
-        {
-            if let Some(base) = a.resolve(&a_inst.ty)
-                && let TypeData::Generic(a_gen) = &*base {
+                return false;
+            }
+            (TypeData::InstanceOf(a_inst), TypeData::Generic(b_gen))
+                if a_inst.type_parameters.is_empty() =>
+            {
+                if let Some(base) = a.resolve(&a_inst.ty)
+                    && let TypeData::Generic(a_gen) = &*base
+                {
                     return a_gen.name == b_gen.name;
                 }
-            false
-        }
+                return false;
+            }
 
-        _ => false,
+            _ => return false,
+        }
     }
 }
 

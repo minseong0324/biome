@@ -61,7 +61,7 @@ invalid.ts:1:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "idle" | "loading".
+  i The inferred return type is narrower: "loading" | "idle".
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   
@@ -81,7 +81,7 @@ invalid.ts:2:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: 404 | 200.
+  i The inferred return type is narrower: 200 | 404.
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   
@@ -204,7 +204,7 @@ invalid.ts:10:22 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "no" | "yes".
+  i The inferred return type is narrower: "yes" | "no".
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   
@@ -225,7 +225,7 @@ invalid.ts:12:41 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "light" | "dark".
+  i The inferred return type is narrower: "dark" | "light".
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   
@@ -246,7 +246,7 @@ invalid.ts:14:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "b" | "a".
+  i The inferred return type is narrower: "a" | "b".
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   
@@ -267,7 +267,7 @@ invalid.ts:20:38 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "b" | "a".
+  i The inferred return type is narrower: "a" | "b".
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   
@@ -288,7 +288,7 @@ invalid.ts:22:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "b" | "a".
+  i The inferred return type is narrower: "a" | "b".
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
   

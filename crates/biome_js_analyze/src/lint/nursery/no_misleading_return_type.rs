@@ -122,7 +122,7 @@ impl Rule for NoMisleadingReturnType {
 
         // Without as const, contextual typing widens property literals.
         if !has_any_const_return
-            && is_only_property_literal_widening(&effective_return_ty, &returns, 0)
+            && is_only_property_literal_widening(&effective_return_ty, &returns)
         {
             return None;
         }
@@ -280,11 +280,7 @@ fn is_literal_of_primitive(ty: &Type) -> bool {
 
 /// Checks whether annotation differs from returns only by property-level
 /// literal widening that contextual typing would handle.
-fn is_only_property_literal_widening(annotation: &Type, returns: &[Type], depth: u8) -> bool {
-    if depth > 3 {
-        return false;
-    }
-
+fn is_only_property_literal_widening(annotation: &Type, returns: &[Type]) -> bool {
     if let TypeData::Tuple(ann_tuple) = &**annotation {
         return returns.iter().all(|inferred| {
             let TypeData::Tuple(inf_tuple) = &**inferred else {
@@ -747,20 +743,6 @@ fn resolve_generic_chain(ty: &Type) -> Type {
     current
 }
 
-fn is_leaf_wider(annotated: &Type, inferred: &Type) -> bool {
-    match (&**annotated, &**inferred) {
-        (TypeData::String, TypeData::Literal(lit)) => {
-            matches!(lit.as_ref(), Literal::String(_) | Literal::Template(_))
-        }
-        (TypeData::Number, TypeData::Literal(lit)) => matches!(lit.as_ref(), Literal::Number(_)),
-        (TypeData::Boolean, TypeData::Literal(lit)) => {
-            matches!(lit.as_ref(), Literal::Boolean(_))
-        }
-        (TypeData::BigInt, TypeData::Literal(lit)) => matches!(lit.as_ref(), Literal::BigInt(_)),
-        _ => false,
-    }
-}
-
 /// Compares non-union type pairs using a work stack. Compound types
 /// (Instance params, Object properties) are decomposed into sub-pairs
 /// and pushed back onto the stack for further comparison.
@@ -776,7 +758,7 @@ fn is_nonunion_wider(annotated: &Type, inferred: &Type) -> bool {
             return false;
         }
 
-        if is_leaf_wider(&ann, &inf) {
+        if is_base_type_of_literal(&ann, &inf) {
             found_wider = true;
             continue;
         }
@@ -947,22 +929,28 @@ fn is_union_wider_than_returns(annotated: &Type, returns: &[Type]) -> bool {
 /// inside `is_wider_than`). Also filters out generic variants whose
 /// constraints are subsumed by other variants in the annotation union.
 fn is_union_wider(annotated: &Type, inferred: &Type) -> bool {
+    let all_inferred_covered = if let TypeData::Union(_) = &**inferred {
+        inferred.flattened_union_variants().all(|inf_v| {
+            annotated
+                .flattened_union_variants()
+                .any(|ann_v| types_match(&ann_v, &inf_v) || is_nonunion_wider(&ann_v, &inf_v))
+        })
+    } else {
+        annotated
+            .flattened_union_variants()
+            .any(|ann_v| types_match(&ann_v, inferred) || is_nonunion_wider(&ann_v, inferred))
+    };
+
+    if !all_inferred_covered {
+        return false;
+    }
+
     let ann_variants: Vec<Type> = annotated.flattened_union_variants().collect();
 
     let inf_variants: Vec<Type> = match &**inferred {
         TypeData::Union(_) => inferred.flattened_union_variants().collect(),
         _ => vec![inferred.clone()],
     };
-
-    let all_inferred_covered = inf_variants.iter().all(|inf_v| {
-        ann_variants
-            .iter()
-            .any(|ann_v| types_match(ann_v, inf_v) || is_nonunion_wider(ann_v, inf_v))
-    });
-
-    if !all_inferred_covered {
-        return false;
-    }
 
     ann_variants
         .iter()

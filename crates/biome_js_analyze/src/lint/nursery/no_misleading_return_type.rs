@@ -23,11 +23,11 @@ declare_lint_rule! {
     ///
     /// ### Invalid
     ///
-    /// ```ts,expect_diagnostic
+    /// ```ts,expect_diagnostic,file=invalid.ts
     /// function getStatus(b: boolean): string { if (b) return "loading"; return "idle"; }
     /// ```
     ///
-    /// ```ts,expect_diagnostic
+    /// ```ts,expect_diagnostic,file=invalid2.ts
     /// function getCode(ok: boolean): number { if (ok) return 200; return 404; }
     /// ```
     ///

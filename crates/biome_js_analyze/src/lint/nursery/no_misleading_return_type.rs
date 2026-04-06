@@ -52,7 +52,7 @@ declare_lint_rule! {
 
 pub struct RuleState {
     annotation_range: TextRange,
-    inferred_description: String,
+    returns: Vec<Type>,
 }
 
 impl Rule for NoMisleadingReturnType {
@@ -139,10 +139,9 @@ impl Rule for NoMisleadingReturnType {
             return None;
         }
 
-        let inferred_description = build_inferred_description(&returns, &effective_return_ty);
         Some(RuleState {
             annotation_range,
-            inferred_description,
+            returns,
         })
     }
 
@@ -158,13 +157,11 @@ impl Rule for NoMisleadingReturnType {
             "A wider return type hides the precise types that callers could rely on."
         });
 
-        let diag = if state.inferred_description.is_empty() {
-            diag
-        } else {
-            let desc = state.inferred_description.as_str();
-            diag.note(markup! {
+        let diag = match build_inferred_description(&state.returns) {
+            Some(desc) => diag.note(markup! {
                 "The inferred return type is narrower: "{desc}"."
-            })
+            }),
+            None => diag,
         };
 
         Some(diag)
@@ -413,8 +410,7 @@ fn is_base_type_of_literal(base: &Type, literal: &Type) -> bool {
 }
 
 /// Builds a string like `"loading" | "idle"` for the diagnostic note.
-/// Returns empty if any return type isn't a simple literal.
-fn build_inferred_description(returns: &[Type], _annotation: &Type) -> String {
+fn build_inferred_description(returns: &[Type]) -> Option<String> {
     let mut result = String::new();
     for ty in returns {
         match &**ty {
@@ -432,26 +428,26 @@ fn build_inferred_description(returns: &[Type], _annotation: &Type) -> String {
                     Literal::Boolean(b) => {
                         result.push_str(if b.as_bool() { "true" } else { "false" })
                     }
-                    _ => return String::new(),
+                    _ => return None,
                 }
             }
-            _ => return String::new(),
+            _ => return None,
         }
     }
 
     if result.is_empty() {
-        return String::new();
+        return None;
     }
 
     if result.contains("...") || result.contains("__internal") || result.contains("typeof import(") {
-        return String::new();
+        return None;
     }
 
     if result.len() > 80 {
-        return String::new();
+        return None;
     }
 
-    result
+    Some(result)
 }
 
 /// Collects return types and tracks `as const` usage from a function body.
@@ -570,37 +566,51 @@ fn resolve_identifier_initializer_type(
 }
 
 fn unwrap_type_wrappers(expr: &AnyJsExpression) -> AnyJsExpression {
-    match expr {
-        AnyJsExpression::TsAsExpression(e) => e
-            .expression()
-            .map_or_else(|_| expr.clone(), |inner| unwrap_type_wrappers(&inner)),
-        AnyJsExpression::TsSatisfiesExpression(e) => e
-            .expression()
-            .map_or_else(|_| expr.clone(), |inner| unwrap_type_wrappers(&inner)),
-        AnyJsExpression::TsTypeAssertionExpression(e) => e
-            .expression()
-            .map_or_else(|_| expr.clone(), |inner| unwrap_type_wrappers(&inner)),
-        AnyJsExpression::JsParenthesizedExpression(e) => e
-            .expression()
-            .map_or_else(|_| expr.clone(), |inner| unwrap_type_wrappers(&inner)),
-        _ => expr.clone(),
+    let mut current = expr.clone();
+    loop {
+        match &current {
+            AnyJsExpression::TsAsExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return current,
+            },
+            AnyJsExpression::TsSatisfiesExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return current,
+            },
+            AnyJsExpression::TsTypeAssertionExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return current,
+            },
+            AnyJsExpression::JsParenthesizedExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return current,
+            },
+            _ => return current,
+        }
     }
 }
 
 fn has_const_assertion(expr: &AnyJsExpression) -> bool {
-    match expr {
-        AnyJsExpression::TsAsExpression(e) => is_const_type_assertion(e),
-        AnyJsExpression::TsTypeAssertionExpression(e) => is_const_angle_bracket_assertion(e),
-        AnyJsExpression::JsParenthesizedExpression(e) => {
-            e.expression().is_ok_and(|inner| has_const_assertion(&inner))
+    let mut current = expr.clone();
+    loop {
+        match &current {
+            AnyJsExpression::TsAsExpression(e) => return is_const_type_assertion(e),
+            AnyJsExpression::TsTypeAssertionExpression(e) => {
+                return is_const_angle_bracket_assertion(e)
+            }
+            AnyJsExpression::JsParenthesizedExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return false,
+            },
+            AnyJsExpression::TsSatisfiesExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return false,
+            },
+            AnyJsExpression::JsIdentifierExpression(id_expr) => {
+                return identifier_refers_to_const_assertion(id_expr)
+            }
+            _ => return false,
         }
-        AnyJsExpression::TsSatisfiesExpression(e) => {
-            e.expression().is_ok_and(|inner| has_const_assertion(&inner))
-        }
-        AnyJsExpression::JsIdentifierExpression(id_expr) => {
-            identifier_refers_to_const_assertion(id_expr)
-        }
-        _ => false,
     }
 }
 
@@ -653,10 +663,34 @@ fn declarator_matches_name_with_const(declarator: &JsVariableDeclarator, name: &
         return false;
     }
 
+    // We already resolved the identifier to reach this declarator,
+    // so there's no need to follow identifiers again.
     declarator
         .initializer()
         .and_then(|init| init.expression().ok())
-        .is_some_and(|init_expr| has_const_assertion(&init_expr))
+        .is_some_and(|init_expr| init_has_direct_const_assertion(&init_expr))
+}
+
+/// Checks for `as const` on the expression itself, without following identifiers.
+fn init_has_direct_const_assertion(expr: &AnyJsExpression) -> bool {
+    let mut current = expr.clone();
+    loop {
+        match &current {
+            AnyJsExpression::TsAsExpression(e) => return is_const_type_assertion(e),
+            AnyJsExpression::TsTypeAssertionExpression(e) => {
+                return is_const_angle_bracket_assertion(e)
+            }
+            AnyJsExpression::JsParenthesizedExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return false,
+            },
+            AnyJsExpression::TsSatisfiesExpression(e) => match e.expression() {
+                Ok(inner) => current = inner,
+                Err(_) => return false,
+            },
+            _ => return false,
+        }
+    }
 }
 
 fn is_const_type_assertion(expr: &TsAsExpression) -> bool {

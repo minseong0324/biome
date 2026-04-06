@@ -2421,6 +2421,11 @@ See https://biomejs.dev/linter/rules/use-destructuring
 	 */
 	useDestructuring?: UseDestructuringConfiguration;
 	/**
+	* Detects a disposable object assigned to a variable without using or await using syntax.
+See https://biomejs.dev/linter/rules/use-disposables 
+	 */
+	useDisposables?: UseDisposablesConfiguration;
+	/**
 	* Enforce that new Error() is thrown with the original error as cause.
 See https://biomejs.dev/linter/rules/use-error-cause 
 	 */
@@ -4356,6 +4361,9 @@ export type UseConsistentTestItConfiguration =
 export type UseDestructuringConfiguration =
 	| RulePlainConfiguration
 	| RuleWithUseDestructuringOptions;
+export type UseDisposablesConfiguration =
+	| RulePlainConfiguration
+	| RuleWithUseDisposablesOptions;
 export type UseErrorCauseConfiguration =
 	| RulePlainConfiguration
 	| RuleWithUseErrorCauseOptions;
@@ -6114,6 +6122,11 @@ export interface RuleWithUseDestructuringOptions {
 	level: RulePlainConfiguration;
 	options?: UseDestructuringOptions;
 }
+export interface RuleWithUseDisposablesOptions {
+	fix?: FixKind;
+	level: RulePlainConfiguration;
+	options?: UseDisposablesOptions;
+}
 export interface RuleWithUseErrorCauseOptions {
 	level: RulePlainConfiguration;
 	options?: UseErrorCauseOptions;
@@ -7695,6 +7708,7 @@ Default: `"it"`
 	withinDescribe?: TestFunctionKind;
 }
 export type UseDestructuringOptions = {};
+export type UseDisposablesOptions = {};
 /**
  * Options for the `useErrorCause` rule.
  */
@@ -8729,6 +8743,7 @@ export type Category =
 	| "lint/nursery/useConsistentObjectDefinition"
 	| "lint/nursery/useConsistentTestIt"
 	| "lint/nursery/useDestructuring"
+	| "lint/nursery/useDisposables"
 	| "lint/nursery/useErrorCause"
 	| "lint/nursery/useExhaustiveSwitchCases"
 	| "lint/nursery/useExpect"

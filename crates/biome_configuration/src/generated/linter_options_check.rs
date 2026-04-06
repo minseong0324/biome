@@ -1622,6 +1622,11 @@ pub fn config_side_rule_options_types() -> Vec<(&'static str, &'static str, Type
         TypeId::of::<biome_rule_options::use_destructuring::UseDestructuringOptions>(),
     ));
     result.push((
+        "nursery",
+        "useDisposables",
+        TypeId::of::<biome_rule_options::use_disposables::UseDisposablesOptions>(),
+    ));
+    result.push((
         "style",
         "useEnumInitializers",
         TypeId::of::<biome_rule_options::use_enum_initializers::UseEnumInitializersOptions>(),

@@ -288,6 +288,12 @@ pub fn quick_test() {
         "> ```\n> hello\n> ```\n",
         "<blockquote>\n<pre><code>hello\n</code></pre>\n</blockquote>\n",
     );
+    // Quoted indented code must terminate before a quoted thematic break.
+    test_example(
+        99921,
+        ">     code\n> ---\n",
+        "<blockquote>\n<pre><code>code\n</code></pre>\n<hr />\n</blockquote>\n",
+    );
     test_example(
         9993,
         "- foo\n  - bar\n",
@@ -380,4 +386,11 @@ pub fn quick_test() {
         "Allowed: <div class=\"a\"\n>ok</div> tag.\n",
         "<p>Allowed: &lt;div class=&quot;a&quot;</p>\n<blockquote>\n<p>ok</div> tag.</p>\n</blockquote>\n",
     );
+    // Setext heading inside blockquote
+    test_example(
+        20002,
+        "> Foo\n> ---\n",
+        "<blockquote>\n<h2>Foo</h2>\n</blockquote>\n",
+    );
+    test_example(20003, "> ---\n", "<blockquote>\n<hr />\n</blockquote>\n");
 }

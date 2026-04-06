@@ -808,6 +808,20 @@ fn is_nonunion_wider(annotated: &Type, inferred: &Type) -> bool {
                 _ => return false,
             },
 
+            (TypeData::Tuple(ann_tuple), TypeData::Tuple(inf_tuple)) => {
+                let ann_elems = ann_tuple.elements();
+                let inf_elems = inf_tuple.elements();
+                if ann_elems.len() != inf_elems.len() || ann_elems.is_empty() {
+                    return false;
+                }
+                for (ann_e, inf_e) in ann_elems.iter().zip(inf_elems.iter()) {
+                    match (ann.resolve(&ann_e.ty), inf.resolve(&inf_e.ty)) {
+                        (Some(a), Some(b)) => stack.push((a, resolve_generic_chain(&b))),
+                        _ => return false,
+                    }
+                }
+            }
+
             _ => return false,
         }
     }

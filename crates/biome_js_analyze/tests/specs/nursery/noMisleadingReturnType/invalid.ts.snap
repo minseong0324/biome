@@ -50,6 +50,8 @@ const satisfiesConst = (): string => ("idle" as const) satisfies string;
 
 function angleBracketConst(): string { return <const>"hello"; }
 
+function tupleWiden(): [string, number] { return ["hello", 42] as const; }
+
 ```
 
 # Diagnostics
@@ -496,10 +498,33 @@ invalid.ts:45:29 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   > 45 │ function angleBracketConst(): string { return <const>"hello"; }
        │                             ^^^^^^^^
     46 │ 
+    47 │ function tupleWiden(): [string, number] { return ["hello", 42] as const; }
   
   i A wider return type hides the precise types that callers could rely on.
   
   i Consider using "hello" as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:47:22 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    45 │ function angleBracketConst(): string { return <const>"hello"; }
+    46 │ 
+  > 47 │ function tupleWiden(): [string, number] { return ["hello", 42] as const; }
+       │                      ^^^^^^^^^^^^^^^^^^
+    48 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   

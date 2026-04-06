@@ -39,3 +39,7 @@ function recordWider(): Record<string, string> {
 }
 
 function nullable(flag: boolean): string | null { if (flag) return "yes"; return null; }
+
+const satisfiesConst = (): string => ("idle" as const) satisfies string;
+
+function angleBracketConst(): string { return <const>"hello"; }

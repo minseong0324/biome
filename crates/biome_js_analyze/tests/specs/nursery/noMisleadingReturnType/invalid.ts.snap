@@ -46,6 +46,10 @@ function recordWider(): Record<string, string> {
 
 function nullable(flag: boolean): string | null { if (flag) return "yes"; return null; }
 
+const satisfiesConst = (): string => ("idle" as const) satisfies string;
+
+function angleBracketConst(): string { return <const>"hello"; }
+
 ```
 
 # Diagnostics
@@ -438,8 +442,54 @@ invalid.ts:41:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   > 41 │ function nullable(flag: boolean): string | null { if (flag) return "yes"; return null; }
        │                                 ^^^^^^^^^^^^^^^
     42 │ 
+    43 │ const satisfiesConst = (): string => ("idle" as const) satisfies string;
   
   i A wider return type hides the precise types that callers could rely on.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:43:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    41 │ function nullable(flag: boolean): string | null { if (flag) return "yes"; return null; }
+    42 │ 
+  > 43 │ const satisfiesConst = (): string => ("idle" as const) satisfies string;
+       │                          ^^^^^^^^
+    44 │ 
+    45 │ function angleBracketConst(): string { return <const>"hello"; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i The inferred return type is narrower: "idle".
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:45:29 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    43 │ const satisfiesConst = (): string => ("idle" as const) satisfies string;
+    44 │ 
+  > 45 │ function angleBracketConst(): string { return <const>"hello"; }
+       │                             ^^^^^^^^
+    46 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i The inferred return type is narrower: "hello".
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   

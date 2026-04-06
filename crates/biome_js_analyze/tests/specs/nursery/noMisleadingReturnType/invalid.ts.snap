@@ -65,7 +65,7 @@ invalid.ts:1:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "loading" | "idle".
+  i Consider using "loading" | "idle" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -87,7 +87,7 @@ invalid.ts:2:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: 200 | 404.
+  i Consider using 200 | 404 as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -110,6 +110,8 @@ invalid.ts:3:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
+  i Narrow the return type to match what the function actually returns.
+  
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
@@ -131,7 +133,7 @@ invalid.ts:5:24 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "main".
+  i Consider using "main" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -153,7 +155,7 @@ invalid.ts:6:24 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "north".
+  i Consider using "north" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -176,7 +178,7 @@ invalid.ts:7:25 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: 42.
+  i Consider using 42 as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -199,7 +201,7 @@ invalid.ts:8:24 lint/nursery/noMisleadingReturnType ━━━━━━━━━�
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "only".
+  i Consider using "only" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -222,7 +224,7 @@ invalid.ts:10:22 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "yes" | "no".
+  i Consider using "yes" | "no" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -245,7 +247,7 @@ invalid.ts:12:41 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "dark" | "light".
+  i Consider using "dark" | "light" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -268,7 +270,7 @@ invalid.ts:14:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "a" | "b".
+  i Consider using "a" | "b" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -291,7 +293,7 @@ invalid.ts:20:38 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "a" | "b".
+  i Consider using "a" | "b" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -314,7 +316,7 @@ invalid.ts:22:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "a" | "b".
+  i Consider using "a" | "b" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -337,6 +339,8 @@ invalid.ts:24:25 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
+  i Narrow the return type to match what the function actually returns.
+  
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
@@ -358,7 +362,7 @@ invalid.ts:28:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "hello".
+  i Consider using "hello" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -381,6 +385,8 @@ invalid.ts:30:25 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
+  i Narrow the return type to match what the function actually returns.
+  
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
@@ -402,7 +408,7 @@ invalid.ts:32:22 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "hello".
+  i Consider using "hello" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -425,6 +431,8 @@ invalid.ts:37:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
+  i Narrow the return type to match what the function actually returns.
+  
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
   i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
@@ -445,6 +453,8 @@ invalid.ts:41:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━
     43 │ const satisfiesConst = (): string => ("idle" as const) satisfies string;
   
   i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -467,7 +477,7 @@ invalid.ts:43:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "idle".
+  i Consider using "idle" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   
@@ -489,7 +499,7 @@ invalid.ts:45:29 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   
   i A wider return type hides the precise types that callers could rely on.
   
-  i The inferred return type is narrower: "hello".
+  i Consider using "hello" as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   

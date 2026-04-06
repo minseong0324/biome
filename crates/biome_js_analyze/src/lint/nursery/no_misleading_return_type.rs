@@ -159,9 +159,11 @@ impl Rule for NoMisleadingReturnType {
 
         let diag = match build_inferred_description(&state.returns) {
             Some(desc) => diag.note(markup! {
-                "The inferred return type is narrower: "{desc}"."
+                "Consider using "{desc}" as the return type."
             }),
-            None => diag,
+            None => diag.note(markup! {
+                "Narrow the return type to match what the function actually returns."
+            }),
         };
 
         Some(diag)

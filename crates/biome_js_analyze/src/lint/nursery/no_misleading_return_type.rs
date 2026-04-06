@@ -914,6 +914,14 @@ fn is_wider_than(annotated: &Type, inferred: &Type) -> bool {
         | (TypeData::BigInt, TypeData::BigInt) => false,
 
         (TypeData::Union(_), _) => is_union_wider(annotated, &current),
+        (_, TypeData::Union(_)) => {
+            current
+                .flattened_union_variants()
+                .all(|v| types_match(annotated, &v) || is_nonunion_wider(annotated, &v))
+                && current
+                    .flattened_union_variants()
+                    .any(|v| is_nonunion_wider(annotated, &v))
+        }
         _ => is_nonunion_wider(annotated, &current),
     }
 }

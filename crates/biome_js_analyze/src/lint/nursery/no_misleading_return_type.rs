@@ -437,10 +437,12 @@ fn build_inferred_description(returns: &[Type]) -> Option<String> {
         return None;
     }
 
+    // Skip values that would look confusing in a diagnostic (e.g. "...").
     if result.contains("...") || result.contains("__internal") || result.contains("typeof import(") {
         return None;
     }
 
+    // Skip overly long descriptions.
     if result.len() > 80 {
         return None;
     }

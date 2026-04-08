@@ -801,65 +801,64 @@ impl Resolvable for TypeReference {
                             // extracting its members, and filtering by K.
                             let is_pick = qualifier.is_pick();
                             let params = self.resolved_params(resolver);
-                            let t_ref = &params[0];
-                            let k_ref = &params[1];
 
-                            let key_names = extract_string_literal_keys(resolver, k_ref);
-
-                            if let Some(key_names) = key_names {
-                                // Resolve T to get its members.
-                                if let Some(resolved_t) = resolver.resolve_and_get(t_ref) {
+                            let members = extract_string_literal_keys(resolver, &params[1])
+                                .and_then(|key_names| {
+                                    let resolved_t = resolver.resolve_and_get(&params[0])?;
                                     let t_data = resolved_t.to_data();
-                                    let members: Vec<TypeMember> = t_data
-                                        .own_members()
-                                        .filter(|member| {
-                                            if let Some(name) = member.name() {
-                                                let name_str = name.text();
-                                                if is_pick {
-                                                    key_names.iter().any(|k| k == name_str)
+                                    if !matches!(
+                                        &t_data,
+                                        TypeData::Object(_)
+                                            | TypeData::Interface(_)
+                                            | TypeData::Class(_)
+                                            | TypeData::Global
+                                    ) {
+                                        return None;
+                                    }
+                                    Some(
+                                        t_data
+                                            .own_members()
+                                            .filter(|member| {
+                                                if let Some(name) = member.name() {
+                                                    let name_str = name.text();
+                                                    if is_pick {
+                                                        key_names
+                                                            .iter()
+                                                            .any(|k| k == name_str)
+                                                    } else {
+                                                        key_names
+                                                            .iter()
+                                                            .all(|k| k != name_str)
+                                                    }
                                                 } else {
-                                                    key_names
-                                                        .iter()
-                                                        .all(|k| k != name_str)
+                                                    // Keep non-named members (like
+                                                    // index signatures) for Omit,
+                                                    // exclude for Pick.
+                                                    !is_pick
                                                 }
-                                            } else {
-                                                // Keep non-named members (like
-                                                // index signatures) for Omit,
-                                                // exclude for Pick.
-                                                !is_pick
-                                            }
-                                        })
-                                        .cloned()
-                                        .collect();
-                                    let resolved_id: ResolvedTypeId = resolver
-                                        .register_and_resolve(TypeData::Object(Box::new(
-                                            Object {
-                                                prototype: None,
-                                                members: members.into(),
-                                            },
-                                        )));
-                                    Self::Resolved(resolved_id)
-                                } else {
-                                    // T couldn't be resolved; fall through to
-                                    // generic instantiation.
-                                    Self::from(TypeReferenceQualifier {
-                                        path: qualifier.path.clone(),
-                                        type_parameters: params,
-                                        scope_id: qualifier.scope_id,
-                                        type_only: qualifier.type_only,
-                                        excluded_binding_id: qualifier
-                                            .excluded_binding_id,
-                                    })
-                                }
+                                            })
+                                            .cloned()
+                                            .collect::<Vec<_>>(),
+                                    )
+                                });
+
+                            if let Some(members) = members {
+                                let resolved_id: ResolvedTypeId = resolver
+                                    .register_and_resolve(TypeData::Object(Box::new(
+                                        Object {
+                                            prototype: None,
+                                            members: members.into(),
+                                        },
+                                    )));
+                                Self::Resolved(resolved_id)
                             } else {
-                                // K couldn't be resolved to string literals;
-                                // fall through to generic instantiation.
                                 Self::from(TypeReferenceQualifier {
                                     path: qualifier.path.clone(),
                                     type_parameters: params,
                                     scope_id: qualifier.scope_id,
                                     type_only: qualifier.type_only,
-                                    excluded_binding_id: qualifier.excluded_binding_id,
+                                    excluded_binding_id: qualifier
+                                        .excluded_binding_id,
                                 })
                             }
                         } else {

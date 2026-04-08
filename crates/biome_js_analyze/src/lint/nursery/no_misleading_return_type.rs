@@ -1,12 +1,13 @@
 use biome_analyze::{Rule, RuleDiagnostic, RuleDomain, context::RuleContext, declare_lint_rule};
 use biome_console::markup;
 use biome_js_syntax::{
-    AnyJsExpression, AnyJsFunction, AnyJsFunctionBody, JsFunctionBody, JsReturnStatement,
+    AnyJsExpression, AnyJsFunction, AnyJsFunctionBody, JsFunctionBody, JsGetterClassMember,
+    JsGetterObjectMember, JsMethodClassMember, JsMethodObjectMember, JsReturnStatement,
     JsSyntaxKind, JsSyntaxNode, JsVariableDeclarator, JsVariableStatement, TsAsExpression,
     TsTypeAssertionExpression,
 };
 use biome_js_type_info::{Literal, Type, TypeData};
-use biome_rowan::{AstNode, TextRange, TokenText};
+use biome_rowan::{AstNode, TextRange, TokenText, declare_node_union};
 use biome_rule_options::no_misleading_return_type::NoMisleadingReturnTypeOptions;
 
 use crate::services::typed::Typed;
@@ -31,6 +32,14 @@ declare_lint_rule! {
     /// function getCode(ok: boolean): number { if (ok) return 200; return 404; }
     /// ```
     ///
+    /// ```ts,expect_diagnostic,file=invalid3.ts
+    /// class Foo { getStatus(b: boolean): string { if (b) return "loading"; return "idle"; } }
+    /// ```
+    ///
+    /// ```ts,expect_diagnostic,file=invalid4.ts
+    /// const obj = { getMode(b: boolean): string { if (b) return "dark"; return "light"; } };
+    /// ```
+    ///
     /// ### Valid
     ///
     /// ```ts
@@ -39,6 +48,10 @@ declare_lint_rule! {
     ///
     /// ```ts
     /// function run(): void { return; }
+    /// ```
+    ///
+    /// ```ts
+    /// class Foo { greet(): string { return "hello"; } }
     /// ```
     pub NoMisleadingReturnType {
         version: "next",
@@ -50,13 +63,22 @@ declare_lint_rule! {
     }
 }
 
+declare_node_union! {
+    pub AnyFunctionLikeWithReturnType =
+        AnyJsFunction
+        | JsMethodClassMember
+        | JsMethodObjectMember
+        | JsGetterClassMember
+        | JsGetterObjectMember
+}
+
 pub struct RuleState {
     annotation_range: TextRange,
     returns: Vec<Type>,
 }
 
 impl Rule for NoMisleadingReturnType {
-    type Query = Typed<AnyJsFunction>;
+    type Query = Typed<AnyFunctionLikeWithReturnType>;
     type State = RuleState;
     type Signals = Option<Self::State>;
     type Options = NoMisleadingReturnTypeOptions;
@@ -64,85 +86,35 @@ impl Rule for NoMisleadingReturnType {
     fn run(ctx: &RuleContext<Self>) -> Self::Signals {
         let node = ctx.query();
 
-        let annotation = node.return_type_annotation()?;
-        let annotation_range = annotation.range();
-
-        if node.is_generator() || is_overload_implementation(node) {
-            return None;
+        match node {
+            AnyFunctionLikeWithReturnType::AnyJsFunction(func) => {
+                run_for_function(ctx, func)
+            }
+            AnyFunctionLikeWithReturnType::JsMethodClassMember(method) => {
+                let annotation = method.return_type_annotation()?;
+                let name = get_member_name_from_class_method(method)?;
+                let func_type = ctx.type_of_member(method.syntax(), name.text());
+                run_for_member(ctx, annotation.range(), &func_type, method.async_token().is_some(), &method.body().ok()?)
+            }
+            AnyFunctionLikeWithReturnType::JsMethodObjectMember(method) => {
+                let annotation = method.return_type_annotation()?;
+                let name = get_member_name_from_object_method(method)?;
+                let func_type = ctx.type_of_member(method.syntax(), name.text());
+                run_for_member(ctx, annotation.range(), &func_type, method.async_token().is_some(), &method.body().ok()?)
+            }
+            AnyFunctionLikeWithReturnType::JsGetterClassMember(getter) => {
+                let annotation = getter.return_type()?;
+                let name = get_member_name_from_class_getter(getter)?;
+                let func_type = ctx.type_of_member(getter.syntax(), name.text());
+                run_for_member(ctx, annotation.range(), &func_type, false, &getter.body().ok()?)
+            }
+            AnyFunctionLikeWithReturnType::JsGetterObjectMember(getter) => {
+                let annotation = getter.return_type()?;
+                let name = get_member_name_from_object_getter(getter)?;
+                let func_type = ctx.type_of_member(getter.syntax(), name.text());
+                run_for_member(ctx, annotation.range(), &func_type, false, &getter.body().ok()?)
+            }
         }
-
-        let func_type = ctx.type_of_function(node);
-        let return_ty = extract_return_type(&func_type)?;
-
-        if is_escape_hatch(&return_ty) {
-            return None;
-        }
-
-        let effective_return_ty = if node.async_token().is_some() {
-            unwrap_promise_inner(&return_ty)
-        } else {
-            return_ty.clone()
-        };
-
-        let body = node.body().ok()?;
-        let (returns, has_any_const_return) = collect_return_info(ctx, &body);
-
-        if returns.is_empty() {
-            return None;
-        }
-
-        // Single literal return: TS widens this to the base type anyway.
-        if returns.len() == 1 && !has_any_const_return && is_literal_of_primitive(&returns[0]) {
-            return None;
-        }
-
-        // true | false === boolean in TS.
-        if matches!(&*effective_return_ty, TypeData::Boolean)
-            && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if b.as_bool())))
-            && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if !b.as_bool())))
-        {
-            return None;
-        }
-
-        if returns.iter().any(is_any_contaminated) {
-            return None;
-        }
-
-        // Annotation has undefined/void but returns don't - likely an implicit
-        // undefined path we can't detect without CFA.
-        if includes_undefined(&effective_return_ty)
-            && !returns.iter().any(includes_undefined)
-        {
-            return None;
-        }
-
-        if returns.iter().any(is_intersection_with_type_param) {
-            return None;
-        }
-
-        // Without as const, contextual typing widens property literals.
-        if !has_any_const_return
-            && is_only_property_literal_widening(&effective_return_ty, &returns)
-        {
-            return None;
-        }
-
-        let is_misleading = if effective_return_ty.is_union() {
-            is_union_wider_than_returns(&effective_return_ty, &returns)
-        } else {
-            returns
-                .iter()
-                .all(|inferred| is_wider_than(&effective_return_ty, inferred))
-        };
-
-        if !is_misleading {
-            return None;
-        }
-
-        Some(RuleState {
-            annotation_range,
-            returns,
-        })
     }
 
     fn diagnostic(_ctx: &RuleContext<Self>, state: &Self::State) -> Option<RuleDiagnostic> {
@@ -209,6 +181,138 @@ fn is_overload_implementation(node: &AnyJsFunction) -> bool {
                     .is_some_and(|t| t.token_text_trimmed() == name)
         })
     })
+}
+
+fn run_for_function(
+    ctx: &RuleContext<NoMisleadingReturnType>,
+    node: &AnyJsFunction,
+) -> Option<RuleState> {
+    let annotation = node.return_type_annotation()?;
+    let annotation_range = annotation.range();
+
+    if node.is_generator() || is_overload_implementation(node) {
+        return None;
+    }
+
+    let func_type = ctx.type_of_function(node);
+    let is_async = node.async_token().is_some();
+    let body = node.body().ok()?;
+
+    run_for_member_with_body(ctx, annotation_range, &func_type, is_async, &body)
+}
+
+fn run_for_member(
+    ctx: &RuleContext<NoMisleadingReturnType>,
+    annotation_range: TextRange,
+    func_type: &Type,
+    is_async: bool,
+    body: &JsFunctionBody,
+) -> Option<RuleState> {
+    run_for_member_with_body(
+        ctx,
+        annotation_range,
+        func_type,
+        is_async,
+        &AnyJsFunctionBody::JsFunctionBody(body.clone()),
+    )
+}
+
+fn run_for_member_with_body(
+    ctx: &RuleContext<NoMisleadingReturnType>,
+    annotation_range: TextRange,
+    func_type: &Type,
+    is_async: bool,
+    body: &AnyJsFunctionBody,
+) -> Option<RuleState> {
+    let return_ty = extract_return_type(func_type)?;
+
+    if is_escape_hatch(&return_ty) {
+        return None;
+    }
+
+    let effective_return_ty = if is_async {
+        unwrap_promise_inner(&return_ty)
+    } else {
+        return_ty.clone()
+    };
+
+    let (returns, has_any_const_return) = collect_return_info(ctx, body);
+
+    if returns.is_empty() {
+        return None;
+    }
+
+    if returns.len() == 1 && !has_any_const_return && is_literal_of_primitive(&returns[0]) {
+        return None;
+    }
+
+    if matches!(&*effective_return_ty, TypeData::Boolean)
+        && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if b.as_bool())))
+        && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if !b.as_bool())))
+    {
+        return None;
+    }
+
+    if returns.iter().any(is_any_contaminated) {
+        return None;
+    }
+
+    if includes_undefined(&effective_return_ty)
+        && !returns.iter().any(includes_undefined)
+    {
+        return None;
+    }
+
+    if returns.iter().any(is_intersection_with_type_param) {
+        return None;
+    }
+
+    if !has_any_const_return
+        && is_only_property_literal_widening(&effective_return_ty, &returns)
+    {
+        return None;
+    }
+
+    let is_misleading = if effective_return_ty.is_union() {
+        is_union_wider_than_returns(&effective_return_ty, &returns)
+    } else {
+        returns
+            .iter()
+            .all(|inferred| is_wider_than(&effective_return_ty, inferred))
+    };
+
+    if !is_misleading {
+        return None;
+    }
+
+    Some(RuleState {
+        annotation_range,
+        returns,
+    })
+}
+
+fn get_member_name_from_class_method(method: &JsMethodClassMember) -> Option<TokenText> {
+    let name = method.name().ok()?;
+    let lit = name.as_js_literal_member_name()?;
+    Some(lit.value().ok()?.token_text_trimmed())
+}
+
+fn get_member_name_from_object_method(method: &JsMethodObjectMember) -> Option<TokenText> {
+    let name = method.name().ok()?;
+    let lit = name.as_js_literal_member_name()?;
+    Some(lit.value().ok()?.token_text_trimmed())
+}
+
+fn get_member_name_from_class_getter(getter: &JsGetterClassMember) -> Option<TokenText> {
+    let name = getter.name().ok()?;
+    let lit = name.as_js_literal_member_name()?;
+    Some(lit.value().ok()?.token_text_trimmed())
+}
+
+fn get_member_name_from_object_getter(getter: &JsGetterObjectMember) -> Option<TokenText> {
+    let name = getter.name().ok()?;
+    let lit = name.as_js_literal_member_name()?;
+    Some(lit.value().ok()?.token_text_trimmed())
 }
 
 fn extract_return_type(func_type: &Type) -> Option<Type> {

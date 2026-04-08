@@ -804,48 +804,7 @@ impl Resolvable for TypeReference {
                             let t_ref = &params[0];
                             let k_ref = &params[1];
 
-                            // Extract key names from K (string literal or union
-                            // of string literals).
-                            let key_names: Option<Vec<String>> =
-                                resolver.resolve_and_get(k_ref).and_then(|resolved_k| {
-                                    match resolved_k.to_data() {
-                                        TypeData::Literal(lit) => {
-                                            if let Literal::String(s) = lit.as_ref() {
-                                                Some(vec![s.as_str().to_string()])
-                                            } else {
-                                                None
-                                            }
-                                        }
-                                        TypeData::Union(union) => {
-                                            let mut names = Vec::new();
-                                            for ty in union.types() {
-                                                if let Some(resolved) =
-                                                    resolver.resolve_and_get(ty)
-                                                {
-                                                    if let TypeData::Literal(lit) =
-                                                        resolved.to_data()
-                                                    {
-                                                        if let Literal::String(s) =
-                                                            lit.as_ref()
-                                                        {
-                                                            names.push(
-                                                                s.as_str().to_string(),
-                                                            );
-                                                        } else {
-                                                            return None;
-                                                        }
-                                                    } else {
-                                                        return None;
-                                                    }
-                                                } else {
-                                                    return None;
-                                                }
-                                            }
-                                            Some(names)
-                                        }
-                                        _ => None,
-                                    }
-                                });
+                            let key_names = extract_string_literal_keys(resolver, k_ref);
 
                             if let Some(key_names) = key_names {
                                 // Resolve T to get its members.
@@ -989,3 +948,34 @@ macro_rules! derive_primitive_resolved {
 }
 
 derive_primitive_resolved!(bool, f64, u32, u64, usize);
+
+fn extract_string_literal_keys(
+    resolver: &mut dyn TypeResolver,
+    k_ref: &TypeReference,
+) -> Option<Vec<String>> {
+    let resolved_k = resolver.resolve_and_get(k_ref)?;
+    match resolved_k.to_data() {
+        TypeData::Literal(lit) => {
+            if let Literal::String(s) = lit.as_ref() {
+                Some(vec![s.as_str().to_string()])
+            } else {
+                None
+            }
+        }
+        TypeData::Union(union) => {
+            let mut names = Vec::new();
+            for ty in union.types() {
+                let resolved = resolver.resolve_and_get(ty)?;
+                let TypeData::Literal(lit) = resolved.to_data() else {
+                    return None;
+                };
+                let Literal::String(s) = lit.as_ref() else {
+                    return None;
+                };
+                names.push(s.as_str().to_string());
+            }
+            Some(names)
+        }
+        _ => None,
+    }
+}

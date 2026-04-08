@@ -790,10 +790,84 @@ impl Resolvable for TypeReference {
                                     members: [TypeMember {
                                         kind: TypeMemberKind::IndexSignature(key_type),
                                         ty: value_type,
+                                        is_optional: false,
+                                        is_readonly: false,
                                     }]
                                     .into(),
                                 })));
                             Self::Resolved(resolved_id)
+                        } else if (qualifier.is_partial()
+                            || qualifier.is_required()
+                            || qualifier.is_readonly_type())
+                            && qualifier.type_parameters.len() == 1
+                        {
+                            let params = self.resolved_params(resolver);
+                            let inner_ref = &params[0];
+                            let is_partial = qualifier.is_partial();
+                            let is_required = qualifier.is_required();
+                            let is_readonly = qualifier.is_readonly_type();
+                            // Collect members while borrowing resolver immutably,
+                            // then modify them afterwards to avoid borrow conflicts.
+                            let collected: Option<Vec<(TypeMember, bool)>> =
+                                resolver.resolve_and_get(inner_ref).map(|resolved| {
+                                    resolved
+                                        .as_raw_data()
+                                        .own_members()
+                                        .map(|member| {
+                                            let was_optional = member.is_optional;
+                                            (
+                                                TypeMember {
+                                                    kind: member.kind.clone(),
+                                                    ty: resolved
+                                                        .apply_module_id_to_reference(&member.ty)
+                                                        .into_owned(),
+                                                    is_optional: if is_partial {
+                                                        true
+                                                    } else if is_required {
+                                                        false
+                                                    } else {
+                                                        member.is_optional
+                                                    },
+                                                    is_readonly: if is_readonly {
+                                                        true
+                                                    } else {
+                                                        member.is_readonly
+                                                    },
+                                                },
+                                                was_optional,
+                                            )
+                                        })
+                                        .collect()
+                                });
+                            if let Some(collected_members) = collected {
+                                let members: Vec<TypeMember> = collected_members
+                                    .into_iter()
+                                    .map(|(mut member, was_optional)| {
+                                        if is_partial && !was_optional {
+                                            let id = resolver.optional(member.ty.clone());
+                                            member.ty = resolver.reference_to_id(id);
+                                        } else if is_required && was_optional {
+                                            strip_undefined_from_member(resolver, &mut member);
+                                        }
+                                        member
+                                    })
+                                    .collect();
+                                let resolved_id: ResolvedTypeId = resolver
+                                    .register_and_resolve(TypeData::Object(Box::new(Object {
+                                        prototype: None,
+                                        members: members.into(),
+                                    })));
+                                Self::Resolved(resolved_id)
+                            } else {
+                                // Cannot resolve inner type, fall through
+                                Self::from(TypeReferenceQualifier {
+                                    path: qualifier.path.clone(),
+                                    type_parameters: self.resolved_params(resolver),
+                                    scope_id: qualifier.scope_id,
+                                    type_only: qualifier.type_only,
+                                    excluded_binding_id: qualifier.excluded_binding_id,
+                                })
+                            }
                         } else {
                             // If we can't resolve the qualifier as is, attempt to
                             // resolve it without type parameters. If it can be
@@ -880,3 +954,24 @@ macro_rules! derive_primitive_resolved {
 }
 
 derive_primitive_resolved!(bool, f64, u32, u64, usize);
+
+fn strip_undefined_from_member(resolver: &mut dyn TypeResolver, member: &mut TypeMember) {
+    let Some(resolved) = resolver.resolve_and_get(&member.ty) else {
+        return;
+    };
+    let TypeData::Union(union) = resolved.as_raw_data() else {
+        return;
+    };
+    let filtered: Vec<_> = union
+        .0
+        .iter()
+        .filter(|v| **v != TypeReference::from(GLOBAL_UNDEFINED_ID))
+        .cloned()
+        .collect();
+    if filtered.len() == 1 {
+        member.ty = filtered[0].clone();
+    } else if filtered.len() < union.0.len() {
+        let id = resolver.register_and_resolve(TypeData::Union(Box::new(Union(filtered.into()))));
+        member.ty = TypeReference::from(id);
+    }
+}

@@ -5,7 +5,7 @@ use biome_js_type_info_macros::Resolvable;
 use biome_rowan::Text;
 
 use crate::{
-    GLOBAL_UNKNOWN_ID, NUM_PREDEFINED_TYPES, Object, ScopeId, TypeData, TypeId,
+    GLOBAL_UNKNOWN_ID, Literal, NUM_PREDEFINED_TYPES, Object, ScopeId, TypeData, TypeId,
     TypeImportQualifier, TypeInstance, TypeMember, TypeMemberKind, TypeReference,
     TypeReferenceQualifier, TypeofValue, Union,
     globals::{GLOBAL_RESOLVER_ID, GLOBAL_UNDEFINED_ID, UNKNOWN_ID, global_type_name},
@@ -794,6 +794,115 @@ impl Resolvable for TypeReference {
                                     .into(),
                                 })));
                             Self::Resolved(resolved_id)
+                        } else if (qualifier.is_pick() || qualifier.is_omit())
+                            && qualifier.type_parameters.len() == 2
+                        {
+                            // Handle Pick<T, K> and Omit<T, K> by resolving T,
+                            // extracting its members, and filtering by K.
+                            let is_pick = qualifier.is_pick();
+                            let params = self.resolved_params(resolver);
+                            let t_ref = &params[0];
+                            let k_ref = &params[1];
+
+                            // Extract key names from K (string literal or union
+                            // of string literals).
+                            let key_names: Option<Vec<String>> =
+                                resolver.resolve_and_get(k_ref).and_then(|resolved_k| {
+                                    match resolved_k.to_data() {
+                                        TypeData::Literal(lit) => {
+                                            if let Literal::String(s) = lit.as_ref() {
+                                                Some(vec![s.as_str().to_string()])
+                                            } else {
+                                                None
+                                            }
+                                        }
+                                        TypeData::Union(union) => {
+                                            let mut names = Vec::new();
+                                            for ty in union.types() {
+                                                if let Some(resolved) =
+                                                    resolver.resolve_and_get(ty)
+                                                {
+                                                    if let TypeData::Literal(lit) =
+                                                        resolved.to_data()
+                                                    {
+                                                        if let Literal::String(s) =
+                                                            lit.as_ref()
+                                                        {
+                                                            names.push(
+                                                                s.as_str().to_string(),
+                                                            );
+                                                        } else {
+                                                            return None;
+                                                        }
+                                                    } else {
+                                                        return None;
+                                                    }
+                                                } else {
+                                                    return None;
+                                                }
+                                            }
+                                            Some(names)
+                                        }
+                                        _ => None,
+                                    }
+                                });
+
+                            if let Some(key_names) = key_names {
+                                // Resolve T to get its members.
+                                if let Some(resolved_t) = resolver.resolve_and_get(t_ref) {
+                                    let t_data = resolved_t.to_data();
+                                    let members: Vec<TypeMember> = t_data
+                                        .own_members()
+                                        .filter(|member| {
+                                            if let Some(name) = member.name() {
+                                                let name_str = name.text();
+                                                if is_pick {
+                                                    key_names.iter().any(|k| k == name_str)
+                                                } else {
+                                                    key_names
+                                                        .iter()
+                                                        .all(|k| k != name_str)
+                                                }
+                                            } else {
+                                                // Keep non-named members (like
+                                                // index signatures) for Omit,
+                                                // exclude for Pick.
+                                                !is_pick
+                                            }
+                                        })
+                                        .cloned()
+                                        .collect();
+                                    let resolved_id: ResolvedTypeId = resolver
+                                        .register_and_resolve(TypeData::Object(Box::new(
+                                            Object {
+                                                prototype: None,
+                                                members: members.into(),
+                                            },
+                                        )));
+                                    Self::Resolved(resolved_id)
+                                } else {
+                                    // T couldn't be resolved; fall through to
+                                    // generic instantiation.
+                                    Self::from(TypeReferenceQualifier {
+                                        path: qualifier.path.clone(),
+                                        type_parameters: params,
+                                        scope_id: qualifier.scope_id,
+                                        type_only: qualifier.type_only,
+                                        excluded_binding_id: qualifier
+                                            .excluded_binding_id,
+                                    })
+                                }
+                            } else {
+                                // K couldn't be resolved to string literals;
+                                // fall through to generic instantiation.
+                                Self::from(TypeReferenceQualifier {
+                                    path: qualifier.path.clone(),
+                                    type_parameters: params,
+                                    scope_id: qualifier.scope_id,
+                                    type_only: qualifier.type_only,
+                                    excluded_binding_id: qualifier.excluded_binding_id,
+                                })
+                            }
                         } else {
                             // If we can't resolve the qualifier as is, attempt to
                             // resolve it without type parameters. If it can be

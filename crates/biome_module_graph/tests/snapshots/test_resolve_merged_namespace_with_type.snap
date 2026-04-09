@@ -43,6 +43,8 @@ Module TypeId(0) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(1),
             ),
+            is_optional: false,
+            is_readonly: false,
         },
     ],
 }

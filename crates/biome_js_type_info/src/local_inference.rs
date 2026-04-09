@@ -1836,6 +1836,8 @@ impl TypeMember {
                 Some(Self {
                     kind: TypeMemberKind::Constructor,
                     ty: ty.into(),
+                    is_optional: false,
+                    is_readonly: false,
                 })
             }
             AnyJsClassMember::JsMethodClassMember(member) => member.name().ok().and_then(|name| {
@@ -1866,7 +1868,15 @@ impl TypeMember {
                     .modifiers()
                     .into_iter()
                     .any(|modifier| modifier.as_js_static_modifier().is_some());
-                Self::from_class_member_info(resolver, scope_id, name, ty.into(), is_static, false)
+                Self::from_class_member_info(
+                    resolver,
+                    scope_id,
+                    name,
+                    ty.into(),
+                    is_static,
+                    false,
+                    false,
+                )
             }),
             AnyJsClassMember::JsPropertyClassMember(member) => {
                 member.name().ok().and_then(|name| {
@@ -1899,6 +1909,7 @@ impl TypeMember {
                         ty,
                         is_static,
                         is_optional,
+                        false,
                     )
                 })
             }
@@ -1920,6 +1931,8 @@ impl TypeMember {
                     Self {
                         kind: TypeMemberKind::Getter(name),
                         ty: resolver.reference_to_owned_data(function.into()),
+                        is_optional: false,
+                        is_readonly: false,
                     }
                 })
             }
@@ -1941,6 +1954,7 @@ impl TypeMember {
                         ty,
                         is_static,
                         is_optional,
+                        false,
                     )
                 })
             }
@@ -1957,6 +1971,10 @@ impl TypeMember {
                         .modifiers()
                         .into_iter()
                         .any(|modifier| modifier.as_js_static_modifier().is_some());
+                    let is_readonly = member
+                        .modifiers()
+                        .into_iter()
+                        .any(|modifier| modifier.as_ts_readonly_modifier().is_some());
                     let is_optional = member
                         .property_annotation()
                         .as_ref()
@@ -1969,6 +1987,7 @@ impl TypeMember {
                         ty,
                         is_static,
                         is_optional,
+                        is_readonly,
                     )
                 })
             }
@@ -2003,6 +2022,8 @@ impl TypeMember {
                     Self {
                         kind: TypeMemberKind::Getter(name.into()),
                         ty: resolver.register_and_resolve(function.into()).into(),
+                        is_optional: false,
+                        is_readonly: false,
                     }
                 })
             }
@@ -2052,6 +2073,8 @@ impl TypeMember {
                     Self {
                         kind,
                         ty: resolver.register_and_resolve(function.into()).into(),
+                        is_optional: false,
+                        is_readonly: false,
                     }
                 }),
             AnyJsObjectMember::JsPropertyObjectMember(member) => member
@@ -2077,6 +2100,8 @@ impl TypeMember {
                         .value()
                         .map(|value| resolver.reference_to_resolved_expression(scope_id, &value))
                         .unwrap_or_default(),
+                    is_optional: false,
+                    is_readonly: false,
                 }),
             AnyJsObjectMember::JsSetterObjectMember(_) => {
                 // TODO: Handle setters
@@ -2093,6 +2118,8 @@ impl TypeMember {
                         ty: TypeReference::unknown(),
                         scope_id: None,
                     })),
+                    is_optional: false,
+                    is_readonly: false,
                 }),
             AnyJsObjectMember::JsSpread(_) => {
                 // TODO: Handle spread operator
@@ -2137,6 +2164,8 @@ impl TypeMember {
                 Some(Self {
                     kind: TypeMemberKind::CallSignature,
                     ty: ty.into(),
+                    is_optional: false,
+                    is_readonly: false,
                 })
             }
             AnyTsTypeMember::TsConstructSignatureTypeMember(member) => {
@@ -2157,6 +2186,8 @@ impl TypeMember {
                 Some(Self {
                     kind: TypeMemberKind::Constructor,
                     ty: ty.into(),
+                    is_optional: false,
+                    is_readonly: false,
                 })
             }
             AnyTsTypeMember::TsGetterSignatureTypeMember(member) => {
@@ -2177,6 +2208,8 @@ impl TypeMember {
                 Some(Self {
                     kind: TypeMemberKind::Getter(name.into()),
                     ty: ResolvedTypeId::new(resolver.level(), resolver.optional(ty)).into(),
+                    is_optional: false,
+                    is_readonly: false,
                 })
             }
             AnyTsTypeMember::TsIndexSignatureTypeMember(member) => {
@@ -2191,9 +2224,12 @@ impl TypeMember {
                     .and_then(|annotation| annotation.ty())
                     .map(|ty| TypeReference::from_any_ts_type(resolver, scope_id, &ty))
                     .ok()?;
+                let is_readonly = member.readonly_token().is_some();
                 Some(Self {
                     kind: TypeMemberKind::IndexSignature(key_ty),
                     ty: value_ty,
+                    is_optional: false,
+                    is_readonly,
                 })
             }
             AnyTsTypeMember::TsMethodSignatureTypeMember(member) => {
@@ -2220,7 +2256,7 @@ impl TypeMember {
                     };
                     let ty = resolver.register_and_resolve(function.into()).into();
                     let is_optional = member.optional_token().is_some();
-                    Self::from_name_and_optional_type(resolver, name, ty, is_optional)
+                    Self::from_name_and_optional_type(resolver, name, ty, is_optional, false)
                 })
             }
             AnyTsTypeMember::TsPropertySignatureTypeMember(member) => {
@@ -2228,7 +2264,8 @@ impl TypeMember {
                     let ty = type_from_annotation(resolver, scope_id, member.type_annotation())
                         .unwrap_or_default();
                     let is_optional = member.optional_token().is_some();
-                    Self::from_name_and_optional_type(resolver, name, ty, is_optional)
+                    let is_readonly = member.readonly_token().is_some();
+                    Self::from_name_and_optional_type(resolver, name, ty, is_optional, is_readonly)
                 })
             }
             AnyTsTypeMember::TsSetterSignatureTypeMember(_member) => {
@@ -2246,6 +2283,7 @@ impl TypeMember {
         ty: TypeReference,
         is_static: bool,
         is_optional: bool,
+        is_readonly: bool,
     ) -> Option<Self> {
         let kind = match name {
             AnyJsClassMemberName::JsComputedMemberName(name) => TypeMemberKind::IndexSignature(
@@ -2270,6 +2308,8 @@ impl TypeMember {
                 }
                 false => ty,
             },
+            is_optional,
+            is_readonly,
         })
     }
 
@@ -2279,6 +2319,7 @@ impl TypeMember {
         name: TokenText,
         ty: TypeReference,
         is_optional: bool,
+        is_readonly: bool,
     ) -> Self {
         Self {
             kind: TypeMemberKind::Named(name.into()),
@@ -2286,6 +2327,8 @@ impl TypeMember {
                 true => ResolvedTypeId::new(resolver.level(), resolver.optional(ty)).into(),
                 false => ty,
             },
+            is_optional,
+            is_readonly,
         }
     }
 
@@ -2315,6 +2358,8 @@ impl TypeMember {
                         members.push(Self {
                             kind: TypeMemberKind::Named(named_param.name.clone()),
                             ty: param.parameter.ty().clone(),
+                            is_optional: false,
+                            is_readonly: false,
                         });
                     }
                 }

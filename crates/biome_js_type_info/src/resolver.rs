@@ -852,14 +852,14 @@ impl Resolvable for TypeReference {
                                         member
                                     })
                                     .collect();
-                                let resolved_id: ResolvedTypeId = resolver
-                                    .register_and_resolve(TypeData::Object(Box::new(Object {
+                                let resolved_id: ResolvedTypeId = resolver.register_and_resolve(
+                                    TypeData::Object(Box::new(Object {
                                         prototype: None,
                                         members: members.into(),
-                                    })));
+                                    })),
+                                );
                                 Self::Resolved(resolved_id)
                             } else {
-                                // Cannot resolve inner type, fall through
                                 Self::from(TypeReferenceQualifier {
                                     path: qualifier.path.clone(),
                                     type_parameters: self.resolved_params(resolver),

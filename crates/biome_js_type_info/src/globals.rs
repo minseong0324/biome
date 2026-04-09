@@ -37,6 +37,8 @@ pub static GLOBAL_TYPE_MEMBERS: LazyLock<Vec<TypeMember>> = LazyLock::new(|| {
             TypeMember {
                 kind: TypeMemberKind::Named(Text::new_static(name)),
                 ty: ResolvedTypeId::new(GLOBAL_LEVEL, id).into(),
+                is_optional: false,
+                is_readonly: false,
             }
         })
         .collect()
@@ -118,11 +120,15 @@ impl Default for GlobalsResolver {
         let member = |name: &'static str, id: TypeId| TypeMember {
             kind: TypeMemberKind::Named(Text::new_static(name)),
             ty: ResolvedTypeId::new(TypeResolverLevel::Global, id).into(),
+            is_optional: false,
+            is_readonly: false,
         };
 
         let static_member = |name: &'static str, id: TypeId| TypeMember {
             kind: TypeMemberKind::NamedStatic(Text::new_static(name)),
             ty: ResolvedTypeId::new(TypeResolverLevel::Global, id).into(),
+            is_optional: false,
+            is_readonly: false,
         };
 
         let array_method_definition =
@@ -199,6 +205,8 @@ impl Default for GlobalsResolver {
                     TypeMember {
                         kind: TypeMemberKind::Named(Text::new_static("length")),
                         ty: GLOBAL_NUMBER_ID.into(),
+                        is_optional: false,
+                        is_readonly: false,
                     },
                 ]),
             })),
@@ -247,6 +255,8 @@ impl Default for GlobalsResolver {
                     TypeMember {
                         kind: TypeMemberKind::Constructor,
                         ty: GLOBAL_PROMISE_CONSTRUCTOR_ID.into(),
+                        is_optional: false,
+                        is_readonly: false,
                     },
                     member("catch", PROMISE_CATCH_ID),
                     member("finally", PROMISE_FINALLY_ID),
@@ -446,6 +456,8 @@ impl Default for GlobalsResolver {
                     )),
                     ty: ResolvedTypeId::new(TypeResolverLevel::Global, DISPOSABLE_DISPOSE_ID)
                         .into(),
+                    is_optional: false,
+                    is_readonly: false,
                 }]),
             })),
         );
@@ -474,6 +486,8 @@ impl Default for GlobalsResolver {
                         ASYNC_DISPOSABLE_ASYNC_DISPOSE_ID,
                     )
                     .into(),
+                    is_optional: false,
+                    is_readonly: false,
                 }]),
             })),
         );

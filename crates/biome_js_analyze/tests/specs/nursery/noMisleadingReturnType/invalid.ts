@@ -47,3 +47,7 @@ function angleBracketConst(): string { return <const>"hello"; }
 function tupleWiden(): [string, number] { return ["hello", 42] as const; }
 
 function ternaryWiden(b: boolean): string { return b ? "a" : "b"; }
+
+function partialWider(): Partial<{name: string, age: number}> { return {name: "hello", age: 42} as const; }
+
+function readonlyWider(): Readonly<{name: string}> { return {name: "hello"} as const; }

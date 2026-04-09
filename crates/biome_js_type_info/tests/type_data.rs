@@ -59,7 +59,7 @@ fn verify_type_sizes() {
 
     assert_eq!(
         std::mem::size_of::<TypeMember>(),
-        40,
+        48,
         "The size shouldn't go higher"
     );
 

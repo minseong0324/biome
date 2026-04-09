@@ -223,6 +223,9 @@ fn resolved_type(ident: IdentOrZero, ty: &Type) -> TokenStream {
         Some(segment) if segment.ident == "Text" => {
             quote! { None }
         }
+        Some(segment) if segment.ident == "bool" => {
+            quote! { None }
+        }
         Some(segment) if segment.ident == "Box" => match &segment.arguments {
             PathArguments::None => abort!(segment, "Box is missing argument"),
             PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
@@ -300,6 +303,7 @@ fn resolved_unit_type(ident: &Ident, ty: &Type) -> Option<TokenStream> {
 
     match path.path.segments.last() {
         Some(segment) if segment.ident == "Text" => None,
+        Some(segment) if segment.ident == "bool" => None,
         Some(segment) if segment.ident == "Box" => match &segment.arguments {
             PathArguments::None => abort!(segment, "Box is missing argument"),
             PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
@@ -363,6 +367,7 @@ fn update_all_references_for_type(instance: TokenStream, ty: &Type) -> Option<To
 
     match path.path.segments.last() {
         Some(segment) if segment.ident == "Text" => None,
+        Some(segment) if segment.ident == "bool" => None,
         Some(segment) if segment.ident == "Box" => match &segment.arguments {
             PathArguments::None => abort!(segment, "Box is missing argument"),
             PathArguments::AngleBracketed(args) if args.args.len() == 1 => {

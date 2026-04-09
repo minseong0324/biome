@@ -862,7 +862,7 @@ impl Resolvable for TypeReference {
                             } else {
                                 Self::from(TypeReferenceQualifier {
                                     path: qualifier.path.clone(),
-                                    type_parameters: self.resolved_params(resolver),
+                                    type_parameters: params,
                                     scope_id: qualifier.scope_id,
                                     type_only: qualifier.type_only,
                                     excluded_binding_id: qualifier.excluded_binding_id,

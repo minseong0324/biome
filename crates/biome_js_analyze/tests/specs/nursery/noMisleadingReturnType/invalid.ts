@@ -47,3 +47,5 @@ function angleBracketConst(): string { return <const>"hello"; }
 function tupleWiden(): [string, number] { return ["hello", 42] as const; }
 
 function ternaryWiden(b: boolean): string { return b ? "a" : "b"; }
+
+function readonlyWider(): Readonly<{name: string}> { return {name: "hello"} as const; }

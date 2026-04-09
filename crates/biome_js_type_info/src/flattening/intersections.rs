@@ -143,6 +143,8 @@ impl MergedType {
                                     TypeMemberKind::NamedStatic(name) => Some(TypeMember {
                                         kind: TypeMemberKind::Named(name),
                                         ty: member.ty,
+                                        is_optional: member.is_optional,
+                                        is_readonly: member.is_readonly,
                                     }),
                                     _ => None,
                                 })

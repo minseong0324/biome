@@ -819,6 +819,8 @@ impl JsModuleInfoCollector {
             .map(|binding| TypeMember {
                 kind: TypeMemberKind::NamedStatic(binding.name.clone()),
                 ty: binding.ty.clone(),
+                is_optional: false,
+                is_readonly: false,
             })
             .collect()
     }

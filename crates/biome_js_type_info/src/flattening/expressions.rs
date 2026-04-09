@@ -241,6 +241,8 @@ pub(super) fn flattened_expression(
                     let member = TypeMember {
                         kind: member.kind.clone(),
                         ty: object.apply_module_id_to_reference(&member.ty).into_owned(),
+                        is_optional: member.is_optional,
+                        is_readonly: member.is_readonly,
                     };
                     Some(TypeData::reference(member.deref_ty(resolver).into_owned()))
                 }

@@ -923,6 +923,8 @@ pub struct TupleElementType {
 pub struct TypeMember {
     pub kind: TypeMemberKind,
     pub ty: TypeReference,
+    pub is_optional: bool,
+    pub is_readonly: bool,
 }
 
 impl TypeMember {
@@ -1436,6 +1438,39 @@ impl TypeReferenceQualifier {
     /// resolution.
     pub fn is_record(&self) -> bool {
         self.path.is_identifier("Record")
+    }
+
+    /// Checks whether this type qualifier references a `Partial` type.
+    ///
+    /// This method simply checks whether the reference is for a literal
+    /// `Partial`, without considering whether another symbol named `Partial` is
+    /// in scope. It can be used _after_ type resolution has failed to find a
+    /// `Partial` symbol in scope, but should not be used _instead of_ such type
+    /// resolution.
+    pub fn is_partial(&self) -> bool {
+        self.path.is_identifier("Partial")
+    }
+
+    /// Checks whether this type qualifier references a `Required` type.
+    ///
+    /// This method simply checks whether the reference is for a literal
+    /// `Required`, without considering whether another symbol named `Required` is
+    /// in scope. It can be used _after_ type resolution has failed to find a
+    /// `Required` symbol in scope, but should not be used _instead of_ such type
+    /// resolution.
+    pub fn is_required(&self) -> bool {
+        self.path.is_identifier("Required")
+    }
+
+    /// Checks whether this type qualifier references a `Readonly` type.
+    ///
+    /// This method simply checks whether the reference is for a literal
+    /// `Readonly`, without considering whether another symbol named `Readonly` is
+    /// in scope. It can be used _after_ type resolution has failed to find a
+    /// `Readonly` symbol in scope, but should not be used _instead of_ such type
+    /// resolution.
+    pub fn is_readonly_type(&self) -> bool {
+        self.path.is_identifier("Readonly")
     }
 
     /// Checks whether this type qualifier references the `RegExp` type.

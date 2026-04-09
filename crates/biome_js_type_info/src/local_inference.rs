@@ -1897,6 +1897,10 @@ impl TypeMember {
                         .modifiers()
                         .into_iter()
                         .any(|modifier| modifier.as_js_static_modifier().is_some());
+                    let is_readonly = member
+                        .modifiers()
+                        .into_iter()
+                        .any(|modifier| modifier.as_ts_readonly_modifier().is_some());
                     let is_optional = member
                         .property_annotation()
                         .as_ref()
@@ -1909,7 +1913,7 @@ impl TypeMember {
                         ty,
                         is_static,
                         is_optional,
-                        false,
+                        is_readonly,
                     )
                 })
             }

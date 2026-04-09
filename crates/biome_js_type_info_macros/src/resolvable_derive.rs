@@ -309,7 +309,9 @@ fn resolved_unit_type(ident: &Ident, ty: &Type) -> Option<TokenStream> {
             PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
                 match args.args.iter().next().unwrap() {
                     GenericArgument::Type(Type::Slice(slice)) => match slice.elem.as_ref() {
-                        Type::Path(ty) if ty.path.is_ident("Text") || ty.path.is_ident("bool") => None,
+                        Type::Path(ty) if ty.path.is_ident("Text") || ty.path.is_ident("bool") => {
+                            None
+                        }
                         _ => abort!(args, "Unsupported arguments"),
                     },
                     GenericArgument::Type(Type::Path(ty)) => {
@@ -373,7 +375,9 @@ fn update_all_references_for_type(instance: TokenStream, ty: &Type) -> Option<To
             PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
                 match args.args.iter().next().unwrap() {
                     GenericArgument::Type(Type::Slice(slice)) => match slice.elem.as_ref() {
-                        Type::Path(ty) if ty.path.is_ident("Text") || ty.path.is_ident("bool") => None,
+                        Type::Path(ty) if ty.path.is_ident("Text") || ty.path.is_ident("bool") => {
+                            None
+                        }
                         Type::Path(_) => Some(quote! {
                             for elem in &mut #instance {
                                 elem.update_all_references(updater);

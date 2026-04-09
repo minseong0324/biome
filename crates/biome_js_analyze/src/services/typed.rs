@@ -4,8 +4,8 @@ use biome_analyze::{
 };
 use biome_js_semantic::SemanticModel;
 use biome_js_syntax::{
-    AnyJsBinding, AnyJsExpression, AnyJsFunction, AnyJsRoot, JsClassDeclaration,
-    JsClassExpression, JsLanguage, JsObjectExpression, JsReferenceIdentifier, JsSyntaxNode,
+    AnyJsBinding, AnyJsExpression, AnyJsFunction, AnyJsRoot, JsClassDeclaration, JsClassExpression,
+    JsLanguage, JsObjectExpression, JsReferenceIdentifier, JsSyntaxNode,
 };
 use biome_js_type_info::Type;
 use biome_module_graph::ModuleResolver;
@@ -83,21 +83,18 @@ impl TypedService {
                         .and_then(|id| id.name_token().ok())
                         .map(|name| {
                             let trimmed = name.token_text_trimmed();
-                            self.type_of_named_value(
-                                name.text_trimmed_range(),
-                                trimmed.text(),
-                            )
+                            self.type_of_named_value(name.text_trimmed_range(), trimmed.text())
                         });
                 }
                 if let Some(class_expr) = JsClassExpression::cast(ancestor.clone()) {
-                    return Some(self.type_of_expression(
-                        &AnyJsExpression::JsClassExpression(class_expr),
-                    ));
+                    return Some(
+                        self.type_of_expression(&AnyJsExpression::JsClassExpression(class_expr)),
+                    );
                 }
                 if let Some(obj_expr) = JsObjectExpression::cast(ancestor.clone()) {
-                    return Some(self.type_of_expression(
-                        &AnyJsExpression::JsObjectExpression(obj_expr),
-                    ));
+                    return Some(
+                        self.type_of_expression(&AnyJsExpression::JsObjectExpression(obj_expr)),
+                    );
                 }
                 None
             })

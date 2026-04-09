@@ -2362,7 +2362,7 @@ impl TypeMember {
                         members.push(Self {
                             kind: TypeMemberKind::Named(named_param.name.clone()),
                             ty: param.parameter.ty().clone(),
-                            is_optional: false,
+                            is_optional: named_param.is_optional,
                             is_readonly: false,
                         });
                     }

@@ -824,11 +824,11 @@ impl Resolvable for TypeReference {
                                                     if is_pick {
                                                         key_names
                                                             .iter()
-                                                            .any(|k| k == name_str)
+                                                            .any(|k| k.text() == name_str)
                                                     } else {
                                                         key_names
                                                             .iter()
-                                                            .all(|k| k != name_str)
+                                                            .all(|k| k.text() != name_str)
                                                     }
                                                 } else {
                                                     // Keep non-named members (like
@@ -843,13 +843,12 @@ impl Resolvable for TypeReference {
                                 });
 
                             if let Some(members) = members {
-                                let resolved_id: ResolvedTypeId = resolver
-                                    .register_and_resolve(TypeData::Object(Box::new(
-                                        Object {
-                                            prototype: None,
-                                            members: members.into(),
-                                        },
-                                    )));
+                                let resolved_id: ResolvedTypeId = resolver.register_and_resolve(
+                                    TypeData::Object(Box::new(Object {
+                                        prototype: None,
+                                        members: members.into(),
+                                    })),
+                                );
                                 Self::Resolved(resolved_id)
                             } else {
                                 Self::from(TypeReferenceQualifier {
@@ -857,8 +856,7 @@ impl Resolvable for TypeReference {
                                     type_parameters: params,
                                     scope_id: qualifier.scope_id,
                                     type_only: qualifier.type_only,
-                                    excluded_binding_id: qualifier
-                                        .excluded_binding_id,
+                                    excluded_binding_id: qualifier.excluded_binding_id,
                                 })
                             }
                         } else {
@@ -951,12 +949,12 @@ derive_primitive_resolved!(bool, f64, u32, u64, usize);
 fn extract_string_literal_keys(
     resolver: &mut dyn TypeResolver,
     k_ref: &TypeReference,
-) -> Option<Vec<String>> {
+) -> Option<Vec<Text>> {
     let resolved_k = resolver.resolve_and_get(k_ref)?;
     match resolved_k.to_data() {
         TypeData::Literal(lit) => {
             if let Literal::String(s) = lit.as_ref() {
-                Some(vec![s.as_str().to_string()])
+                Some(vec![s.as_ref().clone()])
             } else {
                 None
             }
@@ -971,7 +969,7 @@ fn extract_string_literal_keys(
                 let Literal::String(s) = lit.as_ref() else {
                     return None;
                 };
-                names.push(s.as_str().to_string());
+                names.push(s.as_ref().clone());
             }
             Some(names)
         }

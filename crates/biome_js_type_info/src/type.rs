@@ -281,7 +281,8 @@ impl Type {
         })
     }
 
-    /// Finds a member by name and returns its type.
+    /// Looks up a named member in the resolved type data and returns
+    /// its type with the correct module context applied.
     pub fn find_member_type(&self, name: &str) -> Option<Self> {
         self.resolved_data()
             .and_then(|data| {

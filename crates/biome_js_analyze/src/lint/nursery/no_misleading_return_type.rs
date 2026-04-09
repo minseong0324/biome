@@ -2,9 +2,9 @@ use biome_analyze::{Rule, RuleDiagnostic, RuleDomain, context::RuleContext, decl
 use biome_console::markup;
 use biome_js_syntax::{
     AnyJsExpression, AnyJsFunction, AnyJsFunctionBody, JsFunctionBody, JsGetterClassMember,
-    JsGetterObjectMember, JsMethodClassMember, JsMethodObjectMember, JsReturnStatement,
-    JsSyntaxKind, JsSyntaxNode, JsVariableDeclarator, JsVariableStatement, TsAsExpression,
-    TsTypeAssertionExpression,
+    JsGetterObjectMember, JsLiteralMemberName, JsMethodClassMember, JsMethodObjectMember,
+    JsReturnStatement, JsSyntaxKind, JsSyntaxNode, JsVariableDeclarator, JsVariableStatement,
+    TsAsExpression, TsMethodSignatureClassMember, TsTypeAssertionExpression,
 };
 use biome_js_type_info::{Literal, Type, TypeData};
 use biome_rowan::{AstNode, TextRange, TokenText, declare_node_union};
@@ -91,26 +91,35 @@ impl Rule for NoMisleadingReturnType {
                 run_for_function(ctx, func)
             }
             AnyFunctionLikeWithReturnType::JsMethodClassMember(method) => {
+                if method.star_token().is_some() {
+                    return None;
+                }
+                if is_class_method_overload_implementation(method) {
+                    return None;
+                }
                 let annotation = method.return_type_annotation()?;
-                let name = get_member_name_from_class_method(method)?;
+                let name = literal_member_name_text(method.name().ok()?.as_js_literal_member_name()?)?;
                 let func_type = ctx.type_of_member(method.syntax(), name.text());
                 run_for_member(ctx, annotation.range(), &func_type, method.async_token().is_some(), &method.body().ok()?)
             }
             AnyFunctionLikeWithReturnType::JsMethodObjectMember(method) => {
+                if method.star_token().is_some() {
+                    return None;
+                }
                 let annotation = method.return_type_annotation()?;
-                let name = get_member_name_from_object_method(method)?;
+                let name = literal_member_name_text(method.name().ok()?.as_js_literal_member_name()?)?;
                 let func_type = ctx.type_of_member(method.syntax(), name.text());
                 run_for_member(ctx, annotation.range(), &func_type, method.async_token().is_some(), &method.body().ok()?)
             }
             AnyFunctionLikeWithReturnType::JsGetterClassMember(getter) => {
                 let annotation = getter.return_type()?;
-                let name = get_member_name_from_class_getter(getter)?;
+                let name = literal_member_name_text(getter.name().ok()?.as_js_literal_member_name()?)?;
                 let func_type = ctx.type_of_member(getter.syntax(), name.text());
                 run_for_member(ctx, annotation.range(), &func_type, false, &getter.body().ok()?)
             }
             AnyFunctionLikeWithReturnType::JsGetterObjectMember(getter) => {
                 let annotation = getter.return_type()?;
-                let name = get_member_name_from_object_getter(getter)?;
+                let name = literal_member_name_text(getter.name().ok()?.as_js_literal_member_name()?)?;
                 let func_type = ctx.type_of_member(getter.syntax(), name.text());
                 run_for_member(ctx, annotation.range(), &func_type, false, &getter.body().ok()?)
             }
@@ -291,28 +300,32 @@ fn run_for_member_with_body(
     })
 }
 
-fn get_member_name_from_class_method(method: &JsMethodClassMember) -> Option<TokenText> {
-    let name = method.name().ok()?;
-    let lit = name.as_js_literal_member_name()?;
-    Some(lit.value().ok()?.token_text_trimmed())
+fn literal_member_name_text(name: &JsLiteralMemberName) -> Option<TokenText> {
+    Some(name.value().ok()?.token_text_trimmed())
 }
 
-fn get_member_name_from_object_method(method: &JsMethodObjectMember) -> Option<TokenText> {
-    let name = method.name().ok()?;
-    let lit = name.as_js_literal_member_name()?;
-    Some(lit.value().ok()?.token_text_trimmed())
-}
+fn is_class_method_overload_implementation(method: &JsMethodClassMember) -> bool {
+    let name = method
+        .name()
+        .ok()
+        .and_then(|n| n.as_js_literal_member_name().cloned())
+        .and_then(|n| n.value().ok())
+        .map(|t| t.token_text_trimmed());
+    let Some(name) = name else { return false };
 
-fn get_member_name_from_class_getter(getter: &JsGetterClassMember) -> Option<TokenText> {
-    let name = getter.name().ok()?;
-    let lit = name.as_js_literal_member_name()?;
-    Some(lit.value().ok()?.token_text_trimmed())
-}
+    let Some(member_list) = method.syntax().parent() else {
+        return false;
+    };
 
-fn get_member_name_from_object_getter(getter: &JsGetterObjectMember) -> Option<TokenText> {
-    let name = getter.name().ok()?;
-    let lit = name.as_js_literal_member_name()?;
-    Some(lit.value().ok()?.token_text_trimmed())
+    member_list.children().any(|child| {
+        child.kind() == JsSyntaxKind::TS_METHOD_SIGNATURE_CLASS_MEMBER
+            && TsMethodSignatureClassMember::cast(child)
+                .and_then(|sig| sig.name().ok())
+                .and_then(|n| n.as_js_literal_member_name().cloned())
+                .and_then(|n| n.value().ok())
+                .map(|t| t.token_text_trimmed())
+                .is_some_and(|sig_name| sig_name == name)
+    })
 }
 
 fn extract_return_type(func_type: &Type) -> Option<Type> {

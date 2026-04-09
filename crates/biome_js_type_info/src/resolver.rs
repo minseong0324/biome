@@ -815,9 +815,19 @@ impl Resolvable for TypeReference {
                                         .own_members()
                                         .map(|member| {
                                             let was_optional = member.is_optional;
+                                            let kind = match &member.kind {
+                                                TypeMemberKind::IndexSignature(key_ref) => {
+                                                    TypeMemberKind::IndexSignature(
+                                                        resolved
+                                                            .apply_module_id_to_reference(key_ref)
+                                                            .into_owned(),
+                                                    )
+                                                }
+                                                other => other.clone(),
+                                            };
                                             (
                                                 TypeMember {
-                                                    kind: member.kind.clone(),
+                                                    kind,
                                                     ty: resolved
                                                         .apply_module_id_to_reference(&member.ty)
                                                         .into_owned(),

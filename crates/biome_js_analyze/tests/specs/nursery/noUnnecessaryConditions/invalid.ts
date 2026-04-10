@@ -139,3 +139,10 @@ function testCall(fn: () => string) {
 const mixed1 = true || false;  // Left side makes right irrelevant
 const mixed2 = false && true;  // Left side makes right irrelevant
 const mixed3 = null ?? "default";  // Left side is always nullish
+
+// Always truthy Readonly/Partial object
+declare const ro: Readonly<{a: string}>;
+if (ro) console.log();
+
+declare const partialObj2: Partial<{a: string}>;
+if (partialObj2) console.log();

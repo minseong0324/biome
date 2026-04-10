@@ -23,3 +23,10 @@ if (a()) {
 while (a()) {
   // Do something
 }
+
+declare const reqCache: Required<{p?: Promise<string>}>;
+if (reqCache.p) console.log("cached");
+const v = reqCache.p ? "yes" : "no";
+
+declare const roCache: Readonly<{p: Promise<string>}>;
+if (roCache.p) console.log("cached");

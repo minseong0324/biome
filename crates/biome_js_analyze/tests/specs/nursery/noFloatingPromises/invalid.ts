@@ -347,3 +347,9 @@ function returnMaybePromise(): Promise<void> | undefined {
 }
 
 returnMaybePromise();
+
+declare function getReqP(): Required<{p: Promise<void>}>;
+getReqP().p;
+
+declare function getReadonlyP(): Readonly<{p: Promise<void>}>;
+getReadonlyP().p;

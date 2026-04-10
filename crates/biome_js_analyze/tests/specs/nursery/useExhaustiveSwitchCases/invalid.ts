@@ -77,3 +77,11 @@ switch (value4) {
 declare const value5: (string & { foo: 'bar' }) | '1' | 1 | null | undefined;
 switch (value5) {
 }
+
+function switchReq(x: Required<{kind?: "a" | "b" | "c"}>) {
+	switch (x.kind) { case "a": break; case "b": break; }
+}
+
+function switchRo(x: Readonly<{kind: "x" | "y" | "z"}>) {
+	switch (x.kind) { case "x": break; }
+}

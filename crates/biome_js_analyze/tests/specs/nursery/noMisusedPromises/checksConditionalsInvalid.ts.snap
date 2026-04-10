@@ -30,6 +30,13 @@ while (a()) {
   // Do something
 }
 
+declare const reqCache: Required<{p?: Promise<string>}>;
+if (reqCache.p) console.log("cached");
+const v = reqCache.p ? "yes" : "no";
+
+declare const roCache: Readonly<{p: Promise<string>}>;
+if (roCache.p) console.log("cached");
+
 ```
 
 # Diagnostics
@@ -149,6 +156,66 @@ checksConditionalsInvalid.ts:23:8 lint/nursery/noMisusedPromises ━━━━━
        │        ^^^
     24 │   // Do something
     25 │ }
+  
+  i A Promise is always truthy, so this is most likely a mistake.
+  
+  i You may have intended to `await` the Promise instead.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+checksConditionalsInvalid.ts:28:5 lint/nursery/noMisusedPromises ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i A Promise was found where a conditional was expected.
+  
+    27 │ declare const reqCache: Required<{p?: Promise<string>}>;
+  > 28 │ if (reqCache.p) console.log("cached");
+       │     ^^^^^^^^^^
+    29 │ const v = reqCache.p ? "yes" : "no";
+    30 │ 
+  
+  i A Promise is always truthy, so this is most likely a mistake.
+  
+  i You may have intended to `await` the Promise instead.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+checksConditionalsInvalid.ts:29:11 lint/nursery/noMisusedPromises ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i A Promise was found where a conditional was expected.
+  
+    27 │ declare const reqCache: Required<{p?: Promise<string>}>;
+    28 │ if (reqCache.p) console.log("cached");
+  > 29 │ const v = reqCache.p ? "yes" : "no";
+       │           ^^^^^^^^^^
+    30 │ 
+    31 │ declare const roCache: Readonly<{p: Promise<string>}>;
+  
+  i A Promise is always truthy, so this is most likely a mistake.
+  
+  i You may have intended to `await` the Promise instead.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+checksConditionalsInvalid.ts:32:5 lint/nursery/noMisusedPromises ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i A Promise was found where a conditional was expected.
+  
+    31 │ declare const roCache: Readonly<{p: Promise<string>}>;
+  > 32 │ if (roCache.p) console.log("cached");
+       │     ^^^^^^^^^
+    33 │ 
   
   i A Promise is always truthy, so this is most likely a mistake.
   

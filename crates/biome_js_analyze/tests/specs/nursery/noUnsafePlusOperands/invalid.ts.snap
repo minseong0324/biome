@@ -62,6 +62,9 @@ let numberAndBigint = 1 + 1n;
 	total += 1n;
 }
 
+function reqBigInt(x: Required<{b?: bigint}>) { return x.b + 1; }
+function roBigInt(x: Readonly<{b: bigint}>) { return x.b + 1; }
+
 ```
 
 # Diagnostics
@@ -167,6 +170,58 @@ invalid.ts:56:2 lint/nursery/noUnsafePlusOperands ━━━━━━━━━━
        │ 	^^^^^^^^^^^
     57 │ }
     58 │ 
+  
+  i Convert one side so both operands use the same numeric type before applying + or +=.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:59:56 lint/nursery/noUnsafePlusOperands ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Numeric + operations must use either two bigint values or two number values.
+  
+    57 │ }
+    58 │ 
+  > 59 │ function reqBigInt(x: Required<{b?: bigint}>) { return x.b + 1; }
+       │                                                        ^^^^^^^
+    60 │ function roBigInt(x: Readonly<{b: bigint}>) { return x.b + 1; }
+    61 │ 
+  
+  i This operation mixes number with bigint.
+  
+    57 │ }
+    58 │ 
+  > 59 │ function reqBigInt(x: Required<{b?: bigint}>) { return x.b + 1; }
+       │                                                        ^^^^^^^
+    60 │ function roBigInt(x: Readonly<{b: bigint}>) { return x.b + 1; }
+    61 │ 
+  
+  i Convert one side so both operands use the same numeric type before applying + or +=.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:60:54 lint/nursery/noUnsafePlusOperands ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Numeric + operations must use either two bigint values or two number values.
+  
+    59 │ function reqBigInt(x: Required<{b?: bigint}>) { return x.b + 1; }
+  > 60 │ function roBigInt(x: Readonly<{b: bigint}>) { return x.b + 1; }
+       │                                                      ^^^^^^^
+    61 │ 
+  
+  i This operation mixes number with bigint.
+  
+    59 │ function reqBigInt(x: Required<{b?: bigint}>) { return x.b + 1; }
+  > 60 │ function roBigInt(x: Readonly<{b: bigint}>) { return x.b + 1; }
+       │                                                      ^^^^^^^
+    61 │ 
   
   i Convert one side so both operands use the same numeric type before applying + or +=.
   

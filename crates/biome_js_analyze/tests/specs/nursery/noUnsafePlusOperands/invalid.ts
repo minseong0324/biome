@@ -55,3 +55,6 @@ let numberAndBigint = 1 + 1n;
 	let total = 1;
 	total += 1n;
 }
+
+function reqBigInt(x: Required<{b?: bigint}>) { return x.b + 1; }
+function roBigInt(x: Readonly<{b: bigint}>) { return x.b + 1; }

@@ -354,6 +354,12 @@ function returnMaybePromise(): Promise<void> | undefined {
 
 returnMaybePromise();
 
+declare function getReqP(): Required<{p: Promise<void>}>;
+getReqP().p;
+
+declare function getReadonlyP(): Readonly<{p: Promise<void>}>;
+getReadonlyP().p;
+
 ```
 
 # Diagnostics
@@ -1779,6 +1785,42 @@ invalid.ts:349:1 lint/nursery/noFloatingPromises ━━━━━━━━━━�
   > 349 │ returnMaybePromise();
         │ ^^^^^^^^^^^^^^^^^^^^^
     350 │ 
+    351 │ declare function getReqP(): Required<{p: Promise<void>}>;
+  
+  i This happens when a Promise is not awaited, lacks a `.catch` or `.then` rejection handler, or is not explicitly ignored using the `void` operator.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:352:1 lint/nursery/noFloatingPromises ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i A "floating" Promise was found, meaning it is not properly handled and could lead to ignored errors or unexpected behavior.
+  
+    351 │ declare function getReqP(): Required<{p: Promise<void>}>;
+  > 352 │ getReqP().p;
+        │ ^^^^^^^^^^^^
+    353 │ 
+    354 │ declare function getReadonlyP(): Readonly<{p: Promise<void>}>;
+  
+  i This happens when a Promise is not awaited, lacks a `.catch` or `.then` rejection handler, or is not explicitly ignored using the `void` operator.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:355:1 lint/nursery/noFloatingPromises ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i A "floating" Promise was found, meaning it is not properly handled and could lead to ignored errors or unexpected behavior.
+  
+    354 │ declare function getReadonlyP(): Readonly<{p: Promise<void>}>;
+  > 355 │ getReadonlyP().p;
+        │ ^^^^^^^^^^^^^^^^^
+    356 │ 
   
   i This happens when a Promise is not awaited, lacks a `.catch` or `.then` rejection handler, or is not explicitly ignored using the `void` operator.
   

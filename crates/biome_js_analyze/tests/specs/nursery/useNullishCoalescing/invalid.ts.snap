@@ -72,6 +72,26 @@ interface InterfaceWithOptional {
 declare const objFromInterface: InterfaceWithOptional;
 const optionalFromInterface = objFromInterface.a || 'default';
 
+// Partial type
+declare const partialObj: Partial<{name: string}>;
+const partialOr = partialObj.name || 'default';
+
+type P = Partial<{a: number}>;
+declare const p: P;
+const v = p.a || 0;
+
+// Partial<T> with nullable base member
+declare const partNull: Partial<{a: string | null}>;
+const vPartNull = partNull.a || "default";
+
+// Required with nullable optional
+declare const reqNull: Required<{a?: string | null}>;
+const vReqNull = reqNull.a || "default";
+
+// Readonly with optional property
+declare const roOpt: Readonly<{a?: string}>;
+const vRoOpt = roOpt.a || "default";
+
 ```
 
 # Diagnostics
@@ -416,6 +436,111 @@ invalid.ts:67:50 lint/nursery/useNullishCoalescing ━━━━━━━━━�
   > 67 │ const optionalFromInterface = objFromInterface.a || 'default';
        │                                                  ^^
     68 │ 
+    69 │ // Partial type
+  
+  i The || operator checks for all falsy values (including 0, '', and false), while ?? only checks for null and undefined.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/8043 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:71:35 lint/nursery/useNullishCoalescing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Use ?? instead of ||.
+  
+    69 │ // Partial type
+    70 │ declare const partialObj: Partial<{name: string}>;
+  > 71 │ const partialOr = partialObj.name || 'default';
+       │                                   ^^
+    72 │ 
+    73 │ type P = Partial<{a: number}>;
+  
+  i The || operator checks for all falsy values (including 0, '', and false), while ?? only checks for null and undefined.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/8043 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:75:15 lint/nursery/useNullishCoalescing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Use ?? instead of ||.
+  
+    73 │ type P = Partial<{a: number}>;
+    74 │ declare const p: P;
+  > 75 │ const v = p.a || 0;
+       │               ^^
+    76 │ 
+    77 │ // Partial<T> with nullable base member
+  
+  i The || operator checks for all falsy values (including 0, '', and false), while ?? only checks for null and undefined.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/8043 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:79:30 lint/nursery/useNullishCoalescing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Use ?? instead of ||.
+  
+    77 │ // Partial<T> with nullable base member
+    78 │ declare const partNull: Partial<{a: string | null}>;
+  > 79 │ const vPartNull = partNull.a || "default";
+       │                              ^^
+    80 │ 
+    81 │ // Required with nullable optional
+  
+  i The || operator checks for all falsy values (including 0, '', and false), while ?? only checks for null and undefined.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/8043 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:83:28 lint/nursery/useNullishCoalescing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Use ?? instead of ||.
+  
+    81 │ // Required with nullable optional
+    82 │ declare const reqNull: Required<{a?: string | null}>;
+  > 83 │ const vReqNull = reqNull.a || "default";
+       │                            ^^
+    84 │ 
+    85 │ // Readonly with optional property
+  
+  i The || operator checks for all falsy values (including 0, '', and false), while ?? only checks for null and undefined.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/8043 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:87:24 lint/nursery/useNullishCoalescing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Use ?? instead of ||.
+  
+    85 │ // Readonly with optional property
+    86 │ declare const roOpt: Readonly<{a?: string}>;
+  > 87 │ const vRoOpt = roOpt.a || "default";
+       │                        ^^
+    88 │ 
   
   i The || operator checks for all falsy values (including 0, '', and false), while ?? only checks for null and undefined.
   

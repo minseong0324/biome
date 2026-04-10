@@ -56,6 +56,11 @@ declare const threeOrFour: 3 | 4;
 declare const threeOrFourBigInt: 3n | 4n;
 ~~threeOrFourBigInt;
 
+function reqStr(x: Required<{s?: string}>) { return String(x.s); }
+function reqNum(x: Required<{n?: number}>) { return Number(x.n); }
+function reqBig(x: Required<{b?: bigint}>) { return BigInt(x.b); }
+function roStr(x: Readonly<{s: string}>) { return String(x.s); }
+
 ```
 
 # Diagnostics
@@ -587,12 +592,111 @@ invalid.ts:51:1 lint/nursery/noUselessTypeConversion ━━━━━━━━━
   > 51 │ ~~threeOrFourBigInt;
        │ ^^^^^^^^^^^^^^^^^^^
     52 │ 
+    53 │ function reqStr(x: Required<{s?: string}>) { return String(x.s); }
   
   i This expression already evaluates to a bigint.
   
   i This expression already evaluates to a bigint, so the double bitwise NOT has no effect.
   
   i Redundant conversions make it harder to see that the value already has the expected bigint type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9752 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:53:53 lint/nursery/noUselessTypeConversion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Avoid calling `String()` on a string value.
+  
+    51 │ ~~threeOrFourBigInt;
+    52 │ 
+  > 53 │ function reqStr(x: Required<{s?: string}>) { return String(x.s); }
+       │                                                     ^^^^^^
+    54 │ function reqNum(x: Required<{n?: number}>) { return Number(x.n); }
+    55 │ function reqBig(x: Required<{b?: bigint}>) { return BigInt(x.b); }
+  
+  i This expression already evaluates to a string.
+  
+  i Remove the conversion and use the value directly.
+  
+  i Redundant conversions make it harder to see that the value already has the expected string type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9752 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:54:53 lint/nursery/noUselessTypeConversion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Avoid calling `Number()` on a number value.
+  
+    53 │ function reqStr(x: Required<{s?: string}>) { return String(x.s); }
+  > 54 │ function reqNum(x: Required<{n?: number}>) { return Number(x.n); }
+       │                                                     ^^^^^^
+    55 │ function reqBig(x: Required<{b?: bigint}>) { return BigInt(x.b); }
+    56 │ function roStr(x: Readonly<{s: string}>) { return String(x.s); }
+  
+  i This expression already evaluates to a number.
+  
+  i Remove the conversion and use the value directly.
+  
+  i Redundant conversions make it harder to see that the value already has the expected number type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9752 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:55:53 lint/nursery/noUselessTypeConversion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Avoid calling `BigInt()` on a bigint value.
+  
+    53 │ function reqStr(x: Required<{s?: string}>) { return String(x.s); }
+    54 │ function reqNum(x: Required<{n?: number}>) { return Number(x.n); }
+  > 55 │ function reqBig(x: Required<{b?: bigint}>) { return BigInt(x.b); }
+       │                                                     ^^^^^^
+    56 │ function roStr(x: Readonly<{s: string}>) { return String(x.s); }
+    57 │ 
+  
+  i This expression already evaluates to a bigint.
+  
+  i Remove the conversion and use the value directly.
+  
+  i Redundant conversions make it harder to see that the value already has the expected bigint type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9752 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:56:51 lint/nursery/noUselessTypeConversion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Avoid calling `String()` on a string value.
+  
+    54 │ function reqNum(x: Required<{n?: number}>) { return Number(x.n); }
+    55 │ function reqBig(x: Required<{b?: bigint}>) { return BigInt(x.b); }
+  > 56 │ function roStr(x: Readonly<{s: string}>) { return String(x.s); }
+       │                                                   ^^^^^^
+    57 │ 
+  
+  i This expression already evaluates to a string.
+  
+  i Remove the conversion and use the value directly.
+  
+  i Redundant conversions make it harder to see that the value already has the expected string type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9752 for more information or to report possible bugs.
   

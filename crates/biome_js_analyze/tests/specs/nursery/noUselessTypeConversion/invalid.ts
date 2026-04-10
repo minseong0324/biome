@@ -49,3 +49,8 @@ declare const threeOrFour: 3 | 4;
 
 declare const threeOrFourBigInt: 3n | 4n;
 ~~threeOrFourBigInt;
+
+function reqStr(x: Required<{s?: string}>) { return String(x.s); }
+function reqNum(x: Required<{n?: number}>) { return Number(x.n); }
+function reqBig(x: Required<{b?: bigint}>) { return BigInt(x.b); }
+function roStr(x: Readonly<{s: string}>) { return String(x.s); }

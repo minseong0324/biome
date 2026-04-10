@@ -77,3 +77,7 @@ switch (value4) {
 declare const value5: (string & { foo: 'bar' }) | '1' | 1 | null | undefined;
 switch (value5) {
 }
+
+type Status = "loading" | "ready" | "error";
+declare const p: Pick<{s: Status}, "s">;
+switch (p.s) { case "loading": break; case "ready": break; }

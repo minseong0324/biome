@@ -946,6 +946,11 @@ macro_rules! derive_primitive_resolved {
 
 derive_primitive_resolved!(bool, f64, u32, u64, usize);
 
+/// Extracts string literal keys from a `K` type reference in `Pick<T, K>` or
+/// `Omit<T, K>`.
+///
+/// Accepts a single string literal or a union of string literals. Returns
+/// `None` otherwise.
 fn extract_string_literal_keys(
     resolver: &mut dyn TypeResolver,
     k_ref: &TypeReference,

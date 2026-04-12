@@ -795,14 +795,12 @@ impl Resolvable for TypeReference {
                                 })));
                             Self::Resolved(resolved_id)
                         } else if (qualifier.is_partial()
-                            || qualifier.is_required()
-                            || qualifier.is_readonly())
+                            || qualifier.is_required())
                             && qualifier.type_parameters.len() == 1
                         {
                             let params = self.resolved_params(resolver);
                             let inner_ref = &params[0];
                             let is_partial = qualifier.is_partial();
-                            let is_required = qualifier.is_required();
                             // Collect members while borrowing resolver immutably,
                             // then modify them afterwards to avoid borrow conflicts.
                             let collected: Option<Vec<(TypeMember, bool)>> =
@@ -830,15 +828,14 @@ impl Resolvable for TypeReference {
                                                             }
                                                             _ => other.clone(),
                                                         }
-                                                    } else if is_required {
+                                                    } else {
+                                                        // Required: make optional members non-optional
                                                         match other {
                                                             TypeMemberKind::NamedOptional(name) => {
                                                                 TypeMemberKind::Named(name.clone())
                                                             }
                                                             _ => other.clone(),
                                                         }
-                                                    } else {
-                                                        other.clone()
                                                     }
                                                 }
                                             };
@@ -861,12 +858,59 @@ impl Resolvable for TypeReference {
                                         if is_partial && !was_optional {
                                             let id = resolver.optional(member.ty.clone());
                                             member.ty = resolver.reference_to_id(id);
-                                        } else if is_required && was_optional {
+                                        } else if !is_partial && was_optional {
                                             strip_undefined_from_member(resolver, &mut member);
                                         }
                                         member
                                     })
                                     .collect();
+                                let resolved_id: ResolvedTypeId = resolver.register_and_resolve(
+                                    TypeData::Object(Box::new(Object {
+                                        prototype: None,
+                                        members: members.into(),
+                                    })),
+                                );
+                                Self::Resolved(resolved_id)
+                            } else {
+                                Self::from(TypeReferenceQualifier {
+                                    path: qualifier.path.clone(),
+                                    type_parameters: params,
+                                    scope_id: qualifier.scope_id,
+                                    type_only: qualifier.type_only,
+                                    excluded_binding_id: qualifier.excluded_binding_id,
+                                })
+                            }
+                        } else if qualifier.is_readonly()
+                            && qualifier.type_parameters.len() == 1
+                        {
+                            let params = self.resolved_params(resolver);
+                            let inner_ref = &params[0];
+                            let collected: Option<Vec<TypeMember>> =
+                                resolver.resolve_and_get(inner_ref).map(|resolved| {
+                                    resolved
+                                        .as_raw_data()
+                                        .own_members()
+                                        .map(|member| {
+                                            let kind = match &member.kind {
+                                                TypeMemberKind::IndexSignature(key_ref) => {
+                                                    TypeMemberKind::IndexSignature(
+                                                        resolved
+                                                            .apply_module_id_to_reference(key_ref)
+                                                            .into_owned(),
+                                                    )
+                                                }
+                                                other => other.clone(),
+                                            };
+                                            TypeMember {
+                                                kind,
+                                                ty: resolved
+                                                    .apply_module_id_to_reference(&member.ty)
+                                                    .into_owned(),
+                                            }
+                                        })
+                                        .collect()
+                                });
+                            if let Some(members) = collected {
                                 let resolved_id: ResolvedTypeId = resolver.register_and_resolve(
                                     TypeData::Object(Box::new(Object {
                                         prototype: None,

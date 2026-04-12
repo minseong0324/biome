@@ -1014,6 +1014,10 @@ macro_rules! derive_primitive_resolved {
 
 derive_primitive_resolved!(bool, f64, u32, u64, usize);
 
+/// Strips `undefined` from the type of a member that was previously optional.
+///
+/// This is used when applying `Required<T>` to remove the `undefined` that was
+/// added to the member's type when it was marked as optional.
 fn strip_undefined_from_member(resolver: &mut dyn TypeResolver, member: &mut TypeMember) {
     let Some(resolved) = resolver.resolve_and_get(&member.ty) else {
         return;

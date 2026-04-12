@@ -2631,3 +2631,28 @@ fn find_files_recursively_in_directory(
         .filter(|path| predicate(path))
         .collect()
 }
+
+#[test]
+fn test_optional_and_readonly_members() {
+    let fs = MemoryFileSystem::default();
+    fs.insert(
+        "/src/index.ts".into(),
+        r#"export interface Config {
+    name: string;
+    age?: number;
+    readonly id: string;
+    readonly label?: string;
+}
+"#,
+    );
+
+    let added_paths = [BiomePath::new("/src/index.ts")];
+    let added_paths = get_added_js_paths(&fs, &added_paths);
+
+    let module_graph = ModuleGraph::default();
+    module_graph.update_graph_for_js_paths(&fs, &ProjectLayout::default(), &added_paths, true);
+
+    let snapshot = ModuleGraphSnapshot::new(&module_graph, &fs);
+
+    snapshot.assert_snapshot("test_optional_and_readonly_members");
+}

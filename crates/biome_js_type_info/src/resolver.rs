@@ -964,20 +964,22 @@ fn extract_string_literal_keys(
                 None
             }
         }
-        TypeData::Union(union) => {
-            let mut names = Vec::new();
-            for ty in union.types() {
-                let resolved = resolver.resolve_and_get(ty)?;
-                let TypeData::Literal(lit) = resolved.to_data() else {
-                    return None;
-                };
-                let Literal::String(s) = lit.as_ref() else {
-                    return None;
-                };
-                names.push(s.as_ref().clone());
-            }
-            Some(names)
-        }
+        TypeData::Union(union) => Some(
+            union
+                .types()
+                .iter()
+                .filter_map(|ty| {
+                    let resolved = resolver.resolve_and_get(ty)?;
+                    let TypeData::Literal(lit) = resolved.to_data() else {
+                        return None;
+                    };
+                    let Literal::String(s) = lit.as_ref() else {
+                        return None;
+                    };
+                    Some(s.as_ref().clone())
+                })
+                .collect(),
+        ),
         _ => None,
     }
 }

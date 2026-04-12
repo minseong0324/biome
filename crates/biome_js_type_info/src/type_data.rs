@@ -923,11 +923,15 @@ pub struct TupleElementType {
 pub struct TypeMember {
     pub kind: TypeMemberKind,
     pub ty: TypeReference,
-    pub is_optional: bool,
-    pub is_readonly: bool,
 }
 
 impl TypeMember {
+    /// Returns whether this member is optional.
+    #[inline]
+    pub fn is_optional(&self) -> bool {
+        self.kind.is_optional()
+    }
+
     /// Returns a reference to the type of the member if we dereference it.
     ///
     /// This means if the member represents a getter or setter, it will
@@ -989,6 +993,7 @@ pub enum TypeMemberKind {
     Getter(Text),
     IndexSignature(TypeReference),
     Named(Text),
+    NamedOptional(Text),
     NamedStatic(Text),
 }
 
@@ -997,10 +1002,17 @@ impl TypeMemberKind {
         match self {
             Self::CallSignature | Self::IndexSignature(_) => false,
             Self::Constructor => name == "constructor",
-            Self::Getter(own_name) | Self::Named(own_name) | Self::NamedStatic(own_name) => {
-                *own_name == name
-            }
+            Self::Getter(own_name)
+            | Self::Named(own_name)
+            | Self::NamedOptional(own_name)
+            | Self::NamedStatic(own_name) => *own_name == name,
         }
+    }
+
+    /// Returns whether this member kind represents an optional member.
+    #[inline]
+    pub fn is_optional(&self) -> bool {
+        matches!(self, Self::NamedOptional(_))
     }
 
     #[inline]
@@ -1027,7 +1039,10 @@ impl TypeMemberKind {
         match self {
             Self::CallSignature | Self::IndexSignature(_) => None,
             Self::Constructor => Some(Text::new_static("constructor")),
-            Self::Getter(name) | Self::Named(name) | Self::NamedStatic(name) => Some(name.clone()),
+            Self::Getter(name)
+            | Self::Named(name)
+            | Self::NamedOptional(name)
+            | Self::NamedStatic(name) => Some(name.clone()),
         }
     }
 }
@@ -1469,7 +1484,7 @@ impl TypeReferenceQualifier {
     /// in scope. It can be used _after_ type resolution has failed to find a
     /// `Readonly` symbol in scope, but should not be used _instead of_ such type
     /// resolution.
-    pub fn is_readonly_type(&self) -> bool {
+    pub fn is_readonly(&self) -> bool {
         self.path.is_identifier("Readonly")
     }
 

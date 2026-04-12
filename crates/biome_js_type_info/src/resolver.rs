@@ -790,22 +790,19 @@ impl Resolvable for TypeReference {
                                     members: [TypeMember {
                                         kind: TypeMemberKind::IndexSignature(key_type),
                                         ty: value_type,
-                                        is_optional: false,
-                                        is_readonly: false,
                                     }]
                                     .into(),
                                 })));
                             Self::Resolved(resolved_id)
                         } else if (qualifier.is_partial()
                             || qualifier.is_required()
-                            || qualifier.is_readonly_type())
+                            || qualifier.is_readonly())
                             && qualifier.type_parameters.len() == 1
                         {
                             let params = self.resolved_params(resolver);
                             let inner_ref = &params[0];
                             let is_partial = qualifier.is_partial();
                             let is_required = qualifier.is_required();
-                            let is_readonly = qualifier.is_readonly_type();
                             // Collect members while borrowing resolver immutably,
                             // then modify them afterwards to avoid borrow conflicts.
                             let collected: Option<Vec<(TypeMember, bool)>> =
@@ -814,7 +811,7 @@ impl Resolvable for TypeReference {
                                         .as_raw_data()
                                         .own_members()
                                         .map(|member| {
-                                            let was_optional = member.is_optional;
+                                            let was_optional = member.is_optional();
                                             let kind = match &member.kind {
                                                 TypeMemberKind::IndexSignature(key_ref) => {
                                                     TypeMemberKind::IndexSignature(
@@ -823,7 +820,27 @@ impl Resolvable for TypeReference {
                                                             .into_owned(),
                                                     )
                                                 }
-                                                other => other.clone(),
+                                                other => {
+                                                    if is_partial {
+                                                        match other {
+                                                            TypeMemberKind::Named(name) => {
+                                                                TypeMemberKind::NamedOptional(
+                                                                    name.clone(),
+                                                                )
+                                                            }
+                                                            _ => other.clone(),
+                                                        }
+                                                    } else if is_required {
+                                                        match other {
+                                                            TypeMemberKind::NamedOptional(name) => {
+                                                                TypeMemberKind::Named(name.clone())
+                                                            }
+                                                            _ => other.clone(),
+                                                        }
+                                                    } else {
+                                                        other.clone()
+                                                    }
+                                                }
                                             };
                                             (
                                                 TypeMember {
@@ -831,18 +848,6 @@ impl Resolvable for TypeReference {
                                                     ty: resolved
                                                         .apply_module_id_to_reference(&member.ty)
                                                         .into_owned(),
-                                                    is_optional: if is_partial {
-                                                        true
-                                                    } else if is_required {
-                                                        false
-                                                    } else {
-                                                        member.is_optional
-                                                    },
-                                                    is_readonly: if is_readonly {
-                                                        true
-                                                    } else {
-                                                        member.is_readonly
-                                                    },
                                                 },
                                                 was_optional,
                                             )

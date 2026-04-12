@@ -362,7 +362,8 @@ fn is_only_property_literal_widening(annotation: &Type, returns: &[Type]) -> boo
 
         for ann_member in ann_obj.members.iter() {
             let ann_name = match &ann_member.kind {
-                biome_js_type_info::TypeMemberKind::Named(name) => name,
+                biome_js_type_info::TypeMemberKind::Named(name)
+                | biome_js_type_info::TypeMemberKind::NamedOptional(name) => name,
                 _ => continue,
             };
 

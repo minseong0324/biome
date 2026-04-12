@@ -265,11 +265,11 @@ Module TypeId(9) => interface "VFile" {
     "data": Module(0) TypeId(22),
     "messages": Module(0) TypeId(48),
     "contents": Module(0) TypeId(42),
-    "path": Module(0) TypeId(6),
-    "dirname": Module(0) TypeId(6),
-    "basename": Module(0) TypeId(6),
-    "stem": Module(0) TypeId(6),
-    "extname": Module(0) TypeId(6),
+    "path"?: Module(0) TypeId(6),
+    "dirname"?: Module(0) TypeId(6),
+    "basename"?: Module(0) TypeId(6),
+    "stem"?: Module(0) TypeId(6),
+    "extname"?: Module(0) TypeId(6),
     "cwd": string,
     "toString": Module(0) TypeId(37),
     "message": Module(0) TypeId(39),
@@ -291,8 +291,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(49),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -301,8 +299,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(42),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -311,8 +307,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(21),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -321,8 +315,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(26),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -331,8 +323,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(28),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -341,8 +331,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(27),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -351,8 +339,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(44),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -361,8 +347,6 @@ Module TypeId(10) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(9),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
     ],
 }
@@ -426,14 +410,14 @@ Module TypeId(32) => interface "VFileOptions" {
   extends: []
   type_args: []
   members: [
-    "contents": Module(0) TypeId(29),
-    "path": Module(0) TypeId(6),
-    "basename": Module(0) TypeId(6),
-    "stem": Module(0) TypeId(6),
-    "extname": Module(0) TypeId(6),
-    "dirname": Module(0) TypeId(6),
-    "cwd": Module(0) TypeId(6),
-    "data": Module(0) TypeId(31),
+    "contents"?: Module(0) TypeId(29),
+    "path"?: Module(0) TypeId(6),
+    "basename"?: Module(0) TypeId(6),
+    "stem"?: Module(0) TypeId(6),
+    "extname"?: Module(0) TypeId(6),
+    "dirname"?: Module(0) TypeId(6),
+    "cwd"?: Module(0) TypeId(6),
+    "data"?: Module(0) TypeId(31),
     [string]: Module(0) TypeId(30)
   ]
 }
@@ -500,14 +484,14 @@ Module TypeId(44) => interface "VFileOptions" {
   extends: []
   type_args: []
   members: [
-    "contents": Module(0) TypeId(29),
-    "path": Module(0) TypeId(6),
-    "basename": Module(0) TypeId(6),
-    "stem": Module(0) TypeId(6),
-    "extname": Module(0) TypeId(6),
-    "dirname": Module(0) TypeId(6),
-    "cwd": Module(0) TypeId(6),
-    "data": Module(0) TypeId(31),
+    "contents"?: Module(0) TypeId(29),
+    "path"?: Module(0) TypeId(6),
+    "basename"?: Module(0) TypeId(6),
+    "stem"?: Module(0) TypeId(6),
+    "extname"?: Module(0) TypeId(6),
+    "dirname"?: Module(0) TypeId(6),
+    "cwd"?: Module(0) TypeId(6),
+    "data"?: Module(0) TypeId(31),
     [string]: Module(0) TypeId(30)
   ]
 }
@@ -577,11 +561,11 @@ Module TypeId(55) => interface "VFile" {
     "data": Module(0) TypeId(22),
     "messages": Module(0) TypeId(48),
     "contents": Module(0) TypeId(42),
-    "path": Module(0) TypeId(6),
-    "dirname": Module(0) TypeId(6),
-    "basename": Module(0) TypeId(6),
-    "stem": Module(0) TypeId(6),
-    "extname": Module(0) TypeId(6),
+    "path"?: Module(0) TypeId(6),
+    "dirname"?: Module(0) TypeId(6),
+    "basename"?: Module(0) TypeId(6),
+    "stem"?: Module(0) TypeId(6),
+    "extname"?: Module(0) TypeId(6),
     "cwd": string,
     "toString": Module(0) TypeId(50),
     "message": Module(0) TypeId(53),

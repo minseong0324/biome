@@ -194,8 +194,6 @@ Module TypeId(12) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(9),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -204,8 +202,6 @@ Module TypeId(12) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(11),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -214,8 +210,6 @@ Module TypeId(12) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(3),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
     ],
 }
@@ -247,8 +241,6 @@ Module TypeId(16) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(5),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -257,8 +249,6 @@ Module TypeId(16) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(7),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
         TypeMember {
             kind: NamedStatic(
@@ -267,8 +257,6 @@ Module TypeId(16) => Namespace {
             ty: Resolved(
                 Module(0) TypeId(1),
             ),
-            is_optional: false,
-            is_readonly: false,
         },
     ],
 }

@@ -1866,14 +1866,7 @@ impl TypeMember {
                     .modifiers()
                     .into_iter()
                     .any(|modifier| modifier.as_js_static_modifier().is_some());
-                Self::from_class_member_info(
-                    resolver,
-                    scope_id,
-                    name,
-                    ty.into(),
-                    is_static,
-                    false,
-                )
+                Self::from_class_member_info(resolver, scope_id, name, ty.into(), is_static, false)
             }),
             AnyJsClassMember::JsPropertyClassMember(member) => {
                 member.name().ok().and_then(|name| {

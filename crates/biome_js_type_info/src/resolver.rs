@@ -794,8 +794,7 @@ impl Resolvable for TypeReference {
                                     .into(),
                                 })));
                             Self::Resolved(resolved_id)
-                        } else if (qualifier.is_partial()
-                            || qualifier.is_required())
+                        } else if (qualifier.is_partial() || qualifier.is_required())
                             && qualifier.type_parameters.len() == 1
                         {
                             let params = self.resolved_params(resolver);
@@ -880,9 +879,7 @@ impl Resolvable for TypeReference {
                                     excluded_binding_id: qualifier.excluded_binding_id,
                                 })
                             }
-                        } else if qualifier.is_readonly()
-                            && qualifier.type_parameters.len() == 1
-                        {
+                        } else if qualifier.is_readonly() && qualifier.type_parameters.len() == 1 {
                             let params = self.resolved_params(resolver);
                             let inner_ref = &params[0];
                             let collected: Option<Vec<TypeMember>> =

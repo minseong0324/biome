@@ -15,3 +15,6 @@ pickedNums.nums.toSorted();
 
 declare const omittedNums: Omit<{ nums: number[]; label: string }, "label">;
 omittedNums.nums.sort();
+
+function sortReq(x: Required<{arr?: number[]}>) { x.arr.sort(); }
+function sortRo(x: Readonly<{arr: number[]}>) { x.arr.sort(); }

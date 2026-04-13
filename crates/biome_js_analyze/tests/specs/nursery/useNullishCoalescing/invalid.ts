@@ -85,3 +85,23 @@ const nestV = nestPick.cfg || {name: "d"};
 // Optional property in Omit
 declare const omitOpt: Omit<{a: string, b?: number}, "a">;
 const omitV = omitOpt.b || 0;
+
+// Partial type
+declare const partialObj: Partial<{name: string}>;
+const partialOr = partialObj.name || 'default';
+
+type P = Partial<{a: number}>;
+declare const p: P;
+const v = p.a || 0;
+
+// Partial<T> with nullable base member
+declare const partNull: Partial<{a: string | null}>;
+const vPartNull = partNull.a || "default";
+
+// Required with nullable optional
+declare const reqNull: Required<{a?: string | null}>;
+const vReqNull = reqNull.a || "default";
+
+// Readonly with optional property
+declare const roOpt: Readonly<{a?: string}>;
+const vRoOpt = roOpt.a || "default";

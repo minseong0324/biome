@@ -113,6 +113,10 @@ function pickMultipleKeys(): Pick<{name: string, age: number, active: boolean}, 
     return { name: "hello", age: 30 };
 }
 
+function partialSingle(): Partial<{name: string}> { return {name: "hello"}; }
+
+function requiredExact(): Required<{name?: string}> { return {name: "hello"}; }
+
 class Greeter { greet(): string { return "hello"; } }
 const singleObj = { greet(): string { return "hello"; } };
 class ExactClass { getStatus(b: boolean): "a" | "b" { if (b) return "a"; return "b"; } }

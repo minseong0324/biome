@@ -359,3 +359,9 @@ pickedPromiseObj.fn();
 
 declare const omittedPromiseObj: Omit<{fn: () => Promise<void>, other: number}, "other">;
 omittedPromiseObj.fn();
+
+declare function getReqP(): Required<{p: Promise<void>}>;
+getReqP().p;
+
+declare function getReadonlyP(): Readonly<{p: Promise<void>}>;
+getReadonlyP().p;

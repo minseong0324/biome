@@ -52,6 +52,8 @@ function pickWider(): Pick<{name: string, age: number}, "name"> { return {name: 
 
 function omitWider(): Omit<{name: string, age: number}, "age"> { return {name: "hello"} as const; }
 
+function readonlyWider(): Readonly<{name: string}> { return {name: "hello"} as const; }
+
 class StatusClass { getStatus(b: boolean): string { if (b) return "loading"; return "idle"; } }
 
 const modeObj = { getMode(b: boolean): string { if (b) return "dark"; return "light"; } };

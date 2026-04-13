@@ -39,3 +39,10 @@ if (omitPromiseFn.fn()) {
   // Do something
 }
 const val3 = omitPromiseFn.fn() ? 1 : 2;
+
+declare const reqCache: Required<{p?: Promise<string>}>;
+if (reqCache.p) console.log("cached");
+const v = reqCache.p ? "yes" : "no";
+
+declare const roCache: Readonly<{p: Promise<string>}>;
+if (roCache.p) console.log("cached");

@@ -146,3 +146,10 @@ if (pickedObj) console.log(pickedObj.a);
 
 declare const omitObj: Omit<{a: string, b: number}, "b">;
 if (omitObj) console.log();
+
+// Always truthy Readonly/Partial object
+declare const ro: Readonly<{a: string}>;
+if (ro) console.log();
+
+declare const partialObj2: Partial<{a: string}>;
+if (partialObj2) console.log();

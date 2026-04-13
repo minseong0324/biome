@@ -859,6 +859,136 @@ impl Resolvable for TypeReference {
                                     excluded_binding_id: qualifier.excluded_binding_id,
                                 })
                             }
+                        } else if (qualifier.is_partial() || qualifier.is_required())
+                            && qualifier.type_parameters.len() == 1
+                        {
+                            let params = self.resolved_params(resolver);
+                            let inner_ref = &params[0];
+                            let is_partial = qualifier.is_partial();
+                            // Collect members while borrowing resolver immutably,
+                            // then modify them afterwards to avoid borrow conflicts.
+                            let collected: Option<Vec<(TypeMember, bool)>> =
+                                resolver.resolve_and_get(inner_ref).map(|resolved| {
+                                    resolved
+                                        .as_raw_data()
+                                        .own_members()
+                                        .map(|member| {
+                                            let was_optional = member.is_optional();
+                                            let kind = match &member.kind {
+                                                TypeMemberKind::IndexSignature(key_ref) => {
+                                                    TypeMemberKind::IndexSignature(
+                                                        resolved
+                                                            .apply_module_id_to_reference(key_ref)
+                                                            .into_owned(),
+                                                    )
+                                                }
+                                                other => {
+                                                    if is_partial {
+                                                        match other {
+                                                            TypeMemberKind::Named(name) => {
+                                                                TypeMemberKind::NamedOptional(
+                                                                    name.clone(),
+                                                                )
+                                                            }
+                                                            _ => other.clone(),
+                                                        }
+                                                    } else {
+                                                        // Required: make optional members non-optional
+                                                        match other {
+                                                            TypeMemberKind::NamedOptional(name) => {
+                                                                TypeMemberKind::Named(name.clone())
+                                                            }
+                                                            _ => other.clone(),
+                                                        }
+                                                    }
+                                                }
+                                            };
+                                            (
+                                                TypeMember {
+                                                    kind,
+                                                    ty: resolved
+                                                        .apply_module_id_to_reference(&member.ty)
+                                                        .into_owned(),
+                                                },
+                                                was_optional,
+                                            )
+                                        })
+                                        .collect()
+                                });
+                            if let Some(collected_members) = collected {
+                                let members: Vec<TypeMember> = collected_members
+                                    .into_iter()
+                                    .map(|(mut member, was_optional)| {
+                                        if is_partial && !was_optional {
+                                            let id = resolver.optional(member.ty.clone());
+                                            member.ty = resolver.reference_to_id(id);
+                                        } else if !is_partial && was_optional {
+                                            strip_undefined_from_member(resolver, &mut member);
+                                        }
+                                        member
+                                    })
+                                    .collect();
+                                let resolved_id: ResolvedTypeId = resolver.register_and_resolve(
+                                    TypeData::Object(Box::new(Object {
+                                        prototype: None,
+                                        members: members.into(),
+                                    })),
+                                );
+                                Self::Resolved(resolved_id)
+                            } else {
+                                Self::from(TypeReferenceQualifier {
+                                    path: qualifier.path.clone(),
+                                    type_parameters: params,
+                                    scope_id: qualifier.scope_id,
+                                    type_only: qualifier.type_only,
+                                    excluded_binding_id: qualifier.excluded_binding_id,
+                                })
+                            }
+                        } else if qualifier.is_readonly() && qualifier.type_parameters.len() == 1 {
+                            let params = self.resolved_params(resolver);
+                            let inner_ref = &params[0];
+                            let collected: Option<Vec<TypeMember>> =
+                                resolver.resolve_and_get(inner_ref).map(|resolved| {
+                                    resolved
+                                        .as_raw_data()
+                                        .own_members()
+                                        .map(|member| {
+                                            let kind = match &member.kind {
+                                                TypeMemberKind::IndexSignature(key_ref) => {
+                                                    TypeMemberKind::IndexSignature(
+                                                        resolved
+                                                            .apply_module_id_to_reference(key_ref)
+                                                            .into_owned(),
+                                                    )
+                                                }
+                                                other => other.clone(),
+                                            };
+                                            TypeMember {
+                                                kind,
+                                                ty: resolved
+                                                    .apply_module_id_to_reference(&member.ty)
+                                                    .into_owned(),
+                                            }
+                                        })
+                                        .collect()
+                                });
+                            if let Some(members) = collected {
+                                let resolved_id: ResolvedTypeId = resolver.register_and_resolve(
+                                    TypeData::Object(Box::new(Object {
+                                        prototype: None,
+                                        members: members.into(),
+                                    })),
+                                );
+                                Self::Resolved(resolved_id)
+                            } else {
+                                Self::from(TypeReferenceQualifier {
+                                    path: qualifier.path.clone(),
+                                    type_parameters: params,
+                                    scope_id: qualifier.scope_id,
+                                    type_only: qualifier.type_only,
+                                    excluded_binding_id: qualifier.excluded_binding_id,
+                                })
+                            }
                         } else {
                             // If we can't resolve the qualifier as is, attempt to
                             // resolve it without type parameters. If it can be
@@ -981,5 +1111,30 @@ fn extract_string_literal_keys(
                 .collect(),
         ),
         _ => None,
+    }
+}
+
+/// Strips `undefined` from the type of a member that was previously optional.
+///
+/// This is used when applying `Required<T>` to remove the `undefined` that was
+/// added to the member's type when it was marked as optional.
+fn strip_undefined_from_member(resolver: &mut dyn TypeResolver, member: &mut TypeMember) {
+    let Some(resolved) = resolver.resolve_and_get(&member.ty) else {
+        return;
+    };
+    let TypeData::Union(union) = resolved.as_raw_data() else {
+        return;
+    };
+    let filtered: Vec<_> = union
+        .0
+        .iter()
+        .filter(|v| **v != TypeReference::from(GLOBAL_UNDEFINED_ID))
+        .cloned()
+        .collect();
+    if filtered.len() == 1 {
+        member.ty = filtered[0].clone();
+    } else if filtered.len() < union.0.len() {
+        let id = resolver.register_and_resolve(TypeData::Union(Box::new(Union(filtered.into()))));
+        member.ty = TypeReference::from(id);
     }
 }

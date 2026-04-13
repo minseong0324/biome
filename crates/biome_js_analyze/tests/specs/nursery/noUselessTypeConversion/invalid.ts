@@ -65,3 +65,8 @@ Number(pickedNum.n);
 declare const pickedBool: Pick<{ flag: boolean; label: string }, "flag">;
 Boolean(pickedBool.flag);
 !!pickedBool.flag;
+
+function reqStr(x: Required<{s?: string}>) { return String(x.s); }
+function reqNum(x: Required<{n?: number}>) { return Number(x.n); }
+function reqBig(x: Required<{b?: bigint}>) { return BigInt(x.b); }
+function roStr(x: Readonly<{s: string}>) { return String(x.s); }

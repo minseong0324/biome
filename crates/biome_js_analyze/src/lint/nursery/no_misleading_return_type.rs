@@ -860,7 +860,8 @@ fn push_object_pairs(
 
     for ann_member in ann_obj.members.iter() {
         let ann_name = match &ann_member.kind {
-            biome_js_type_info::TypeMemberKind::Named(name) => name,
+            biome_js_type_info::TypeMemberKind::Named(name)
+            | biome_js_type_info::TypeMemberKind::NamedOptional(name) => name,
             _ => continue,
         };
         let inf_member = inf_obj.members.iter().find(|m| m.kind.has_name(ann_name));
@@ -888,7 +889,8 @@ fn push_object_literal_pairs(
 
     for ann_member in ann_obj.members.iter() {
         let ann_name = match &ann_member.kind {
-            biome_js_type_info::TypeMemberKind::Named(name) => name,
+            biome_js_type_info::TypeMemberKind::Named(name)
+            | biome_js_type_info::TypeMemberKind::NamedOptional(name) => name,
             _ => continue,
         };
         let inf_member = inf_lit.members().iter().find(|m| m.kind.has_name(ann_name));

@@ -394,7 +394,19 @@ fn is_intersection_with_type_param(ty: &Type) -> bool {
 }
 
 fn is_literal_of_primitive(ty: &Type) -> bool {
-    matches!(&**ty, TypeData::Literal(lit) if lit.is_primitive())
+    match &**ty {
+        TypeData::Literal(lit) => lit.is_primitive(),
+        // The type resolver may wrap a single literal in a Union for mutable
+        // bindings.  Treat a one-element union of a primitive literal the same.
+        TypeData::Union(_) => {
+            let mut iter = ty.flattened_union_variants();
+            matches!(
+                (iter.next(), iter.next()),
+                (Some(v), None) if matches!(&*v, TypeData::Literal(lit) if lit.is_primitive())
+            )
+        }
+        _ => false,
+    }
 }
 
 /// Checks whether annotation differs from returns only by property-level
@@ -1035,12 +1047,26 @@ fn is_wider_than(annotated: &Type, inferred: &Type) -> bool {
 
         (TypeData::Union(_), _) => is_union_wider(annotated, &current),
         (_, TypeData::Union(_)) => {
-            current
-                .flattened_union_variants()
-                .all(|v| types_match(annotated, &v) || is_nonunion_wider(annotated, &v))
-                && current
-                    .flattened_union_variants()
-                    .any(|v| is_nonunion_wider(annotated, &v))
+            let variants: Vec<_> = current.flattened_union_variants().collect();
+
+            // When the annotation's base type already appears as a variant in the
+            // inferred union, any literal subtypes are subsumed by it — the union
+            // collapses to the base type (e.g., 0 | number = number).  In that
+            // case the annotation is not wider than the inferred type.
+            if variants.iter().any(|v| types_match(annotated, v))
+                && variants
+                    .iter()
+                    .all(|v| types_match(annotated, v) || is_base_type_of_literal(annotated, v))
+            {
+                return false;
+            }
+
+            variants
+                .iter()
+                .all(|v| types_match(annotated, v) || is_nonunion_wider(annotated, v))
+                && variants
+                    .iter()
+                    .any(|v| is_nonunion_wider(annotated, v))
         }
         _ => is_nonunion_wider(annotated, &current),
     }

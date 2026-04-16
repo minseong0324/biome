@@ -1047,26 +1047,26 @@ fn is_wider_than(annotated: &Type, inferred: &Type) -> bool {
 
         (TypeData::Union(_), _) => is_union_wider(annotated, &current),
         (_, TypeData::Union(_)) => {
-            let variants: Vec<_> = current.flattened_union_variants().collect();
-
             // When the annotation's base type already appears as a variant in the
             // inferred union, any literal subtypes are subsumed by it — the union
             // collapses to the base type (e.g., 0 | number = number).  In that
             // case the annotation is not wider than the inferred type.
-            if variants.iter().any(|v| types_match(annotated, v))
-                && variants
-                    .iter()
-                    .all(|v| types_match(annotated, v) || is_base_type_of_literal(annotated, v))
-            {
+            let (has_base_variant, all_subsumed, all_covered, any_wider) = current
+                .flattened_union_variants()
+                .fold((false, true, true, false), |(hb, asum, acov, aw), v| {
+                    let matches = types_match(annotated, &v);
+                    let wider = is_nonunion_wider(annotated, &v);
+                    (
+                        hb || matches,
+                        asum && (matches || is_base_type_of_literal(annotated, &v)),
+                        acov && (matches || wider),
+                        aw || wider,
+                    )
+                });
+            if has_base_variant && all_subsumed {
                 return false;
             }
-
-            variants
-                .iter()
-                .all(|v| types_match(annotated, v) || is_nonunion_wider(annotated, v))
-                && variants
-                    .iter()
-                    .any(|v| is_nonunion_wider(annotated, v))
+            all_covered && any_wider
         }
         _ => is_nonunion_wider(annotated, &current),
     }

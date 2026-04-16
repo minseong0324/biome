@@ -1053,16 +1053,19 @@ fn is_wider_than(annotated: &Type, inferred: &Type) -> bool {
             // case the annotation is not wider than the inferred type.
             let (has_base_variant, all_subsumed, all_covered, any_wider) = current
                 .flattened_union_variants()
-                .fold((false, true, true, false), |(hb, asum, acov, aw), v| {
-                    let matches = types_match(annotated, &v);
-                    let wider = is_nonunion_wider(annotated, &v);
-                    (
-                        hb || matches,
-                        asum && (matches || is_base_type_of_literal(annotated, &v)),
-                        acov && (matches || wider),
-                        aw || wider,
-                    )
-                });
+                .fold(
+                    (false, true, true, false),
+                    |(has_base_variant, all_subsumed, all_covered, any_wider), v| {
+                        let matches = types_match(annotated, &v);
+                        let wider = is_nonunion_wider(annotated, &v);
+                        (
+                            has_base_variant || matches,
+                            all_subsumed && (matches || is_base_type_of_literal(annotated, &v)),
+                            all_covered && (matches || wider),
+                            any_wider || wider,
+                        )
+                    },
+                );
             if has_base_variant && all_subsumed {
                 return false;
             }

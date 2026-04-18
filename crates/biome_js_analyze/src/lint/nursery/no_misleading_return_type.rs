@@ -117,12 +117,18 @@ impl Rule for NoMisleadingReturnType {
             AnyFunctionLikeWithReturnType::JsGetterClassMember(getter) => {
                 let annotation = getter.return_type()?;
                 let name = literal_member_name_text(getter.name().ok()?.as_js_literal_member_name()?)?;
+                if has_matching_setter(getter.syntax(), &name) {
+                    return None;
+                }
                 let func_type = ctx.type_of_member(getter.syntax(), name.text());
                 run_for_member(ctx, annotation.range(), &func_type, false, &getter.body().ok()?)
             }
             AnyFunctionLikeWithReturnType::JsGetterObjectMember(getter) => {
                 let annotation = getter.return_type()?;
                 let name = literal_member_name_text(getter.name().ok()?.as_js_literal_member_name()?)?;
+                if has_matching_setter(getter.syntax(), &name) {
+                    return None;
+                }
                 let func_type = ctx.type_of_member(getter.syntax(), name.text());
                 run_for_member(ctx, annotation.range(), &func_type, false, &getter.body().ok()?)
             }
@@ -304,7 +310,7 @@ fn run_for_member_with_body(
 }
 
 fn literal_member_name_text(name: &JsLiteralMemberName) -> Option<TokenText> {
-    Some(name.value().ok()?.token_text_trimmed())
+    name.name().ok()
 }
 
 fn is_class_method_overload_implementation(method: &JsMethodClassMember) -> bool {
@@ -329,6 +335,37 @@ fn is_class_method_overload_implementation(method: &JsMethodClassMember) -> bool
                 .map(|t| t.token_text_trimmed())
                 .is_some_and(|sig_name| sig_name == name)
     })
+}
+
+/// Returns true if the getter has a same-named sibling setter in the same
+/// namespace. TypeScript widens the getter's type to match the setter's
+/// parameter type, so the wider annotation is not misleading.
+fn has_matching_setter(getter_syntax: &JsSyntaxNode, getter_name: &TokenText) -> bool {
+    let Some(member_list) = getter_syntax.parent() else {
+        return false;
+    };
+    let getter_is_static = is_static_accessor(getter_syntax);
+    member_list.children().any(|child| {
+        matches!(
+            child.kind(),
+            JsSyntaxKind::JS_SETTER_CLASS_MEMBER | JsSyntaxKind::JS_SETTER_OBJECT_MEMBER
+        ) && is_static_accessor(&child) == getter_is_static
+            && child
+                .children()
+                .find_map(JsLiteralMemberName::cast)
+                .and_then(|name_node| name_node.name().ok())
+                .is_some_and(|setter_name| setter_name == *getter_name)
+    })
+}
+
+/// Returns true if the accessor is declared `static`.
+fn is_static_accessor(node: &JsSyntaxNode) -> bool {
+    node.children()
+        .find(|child| child.kind() == JsSyntaxKind::JS_METHOD_MODIFIER_LIST)
+        .is_some_and(|list| {
+            list.children()
+                .any(|modifier| modifier.kind() == JsSyntaxKind::JS_STATIC_MODIFIER)
+        })
 }
 
 fn extract_return_type(func_type: &Type) -> Option<Type> {

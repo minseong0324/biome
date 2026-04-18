@@ -77,6 +77,9 @@ pub struct RuleState {
     returns: Vec<Type>,
 }
 
+/// Maximum iterations for type graph traversal to guard against infinite loops on cyclic types.
+const MAX_TYPE_TRAVERSAL_ITERATIONS: usize = 50;
+
 impl Rule for NoMisleadingReturnType {
     type Query = Typed<AnyFunctionLikeWithReturnType>;
     type State = RuleState;
@@ -419,7 +422,7 @@ fn is_only_property_literal_widening(annotation: &Type, returns: &[Type]) -> boo
 
         while let Some((annotated, inferred)) = stack.pop() {
             iterations += 1;
-            if iterations > 50 {
+            if iterations > MAX_TYPE_TRAVERSAL_ITERATIONS {
                 return false;
             }
 
@@ -906,7 +909,7 @@ fn is_nonunion_wider(annotated: &Type, inferred: &Type) -> bool {
 
     while let Some((ann, inf)) = stack.pop() {
         iterations += 1;
-        if iterations > 50 {
+        if iterations > MAX_TYPE_TRAVERSAL_ITERATIONS {
             return false;
         }
 

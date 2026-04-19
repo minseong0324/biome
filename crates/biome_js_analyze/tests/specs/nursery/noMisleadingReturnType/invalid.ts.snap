@@ -74,6 +74,31 @@ const getterObj = { get code(): number { if (Math.random() > 0.5) return 200; re
 
 class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
 
+function singleWithNull(): string | null { return "hello"; }
+function singleWithExtraPrimitive(): string | number { return "hello"; }
+function singleBoolWithNull(): boolean | null { return true; }
+function singleWithExtraLiteral(): string | 0 { return "hello"; }
+function threeVariantsSingleReturn(): string | number | null { return "hello"; }
+function partialReduce(b: boolean): string | number | null { if (b) return "a"; return 1; }
+function multiLiteralNarrow(b: boolean): string | null { if (b) return "a"; return "b"; }
+function exactMatchDropNull(b: boolean): "a" | "b" | null { if (b) return "a"; return "b"; }
+function asConstUnionAnnotation(): string | null { return "hello" as const; }
+
+async function asyncUnionNull(): Promise<string | null> { return "hello"; }
+
+const arrowUnionNull = (): string | null => "hello";
+
+class UnionClass { getValue(): string | null { return "hello"; } }
+
+const unionObj = { getValue(): string | null { return "hello"; } };
+
+class UnionGetter { get value(): string | null { return "hello"; } }
+
+function nestedUnion(): string | (number | null) { return "hello"; }
+
+type SimpleAlias = string | null;
+function simpleAliasUnion(): SimpleAlias { return "hello"; }
+
 ```
 
 # Diagnostics
@@ -796,10 +821,376 @@ invalid.ts:69:48 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   > 69 │ class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
        │                                                ^^^^^^^^^^^^^^^^^
     70 │ 
+    71 │ function singleWithNull(): string | null { return "hello"; }
   
   i A wider return type hides the precise types that callers could rely on.
   
   i Consider using "loading" | "idle" as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:71:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    69 │ class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
+    70 │ 
+  > 71 │ function singleWithNull(): string | null { return "hello"; }
+       │                          ^^^^^^^^^^^^^^^
+    72 │ function singleWithExtraPrimitive(): string | number { return "hello"; }
+    73 │ function singleBoolWithNull(): boolean | null { return true; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:72:36 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    71 │ function singleWithNull(): string | null { return "hello"; }
+  > 72 │ function singleWithExtraPrimitive(): string | number { return "hello"; }
+       │                                    ^^^^^^^^^^^^^^^^^
+    73 │ function singleBoolWithNull(): boolean | null { return true; }
+    74 │ function singleWithExtraLiteral(): string | 0 { return "hello"; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:73:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    71 │ function singleWithNull(): string | null { return "hello"; }
+    72 │ function singleWithExtraPrimitive(): string | number { return "hello"; }
+  > 73 │ function singleBoolWithNull(): boolean | null { return true; }
+       │                              ^^^^^^^^^^^^^^^^
+    74 │ function singleWithExtraLiteral(): string | 0 { return "hello"; }
+    75 │ function threeVariantsSingleReturn(): string | number | null { return "hello"; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using boolean as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:74:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    72 │ function singleWithExtraPrimitive(): string | number { return "hello"; }
+    73 │ function singleBoolWithNull(): boolean | null { return true; }
+  > 74 │ function singleWithExtraLiteral(): string | 0 { return "hello"; }
+       │                                  ^^^^^^^^^^^^
+    75 │ function threeVariantsSingleReturn(): string | number | null { return "hello"; }
+    76 │ function partialReduce(b: boolean): string | number | null { if (b) return "a"; return 1; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:75:37 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    73 │ function singleBoolWithNull(): boolean | null { return true; }
+    74 │ function singleWithExtraLiteral(): string | 0 { return "hello"; }
+  > 75 │ function threeVariantsSingleReturn(): string | number | null { return "hello"; }
+       │                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+    76 │ function partialReduce(b: boolean): string | number | null { if (b) return "a"; return 1; }
+    77 │ function multiLiteralNarrow(b: boolean): string | null { if (b) return "a"; return "b"; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:76:35 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    74 │ function singleWithExtraLiteral(): string | 0 { return "hello"; }
+    75 │ function threeVariantsSingleReturn(): string | number | null { return "hello"; }
+  > 76 │ function partialReduce(b: boolean): string | number | null { if (b) return "a"; return 1; }
+       │                                   ^^^^^^^^^^^^^^^^^^^^^^^^
+    77 │ function multiLiteralNarrow(b: boolean): string | null { if (b) return "a"; return "b"; }
+    78 │ function exactMatchDropNull(b: boolean): "a" | "b" | null { if (b) return "a"; return "b"; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using "a" | 1 as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:77:40 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    75 │ function threeVariantsSingleReturn(): string | number | null { return "hello"; }
+    76 │ function partialReduce(b: boolean): string | number | null { if (b) return "a"; return 1; }
+  > 77 │ function multiLiteralNarrow(b: boolean): string | null { if (b) return "a"; return "b"; }
+       │                                        ^^^^^^^^^^^^^^^
+    78 │ function exactMatchDropNull(b: boolean): "a" | "b" | null { if (b) return "a"; return "b"; }
+    79 │ function asConstUnionAnnotation(): string | null { return "hello" as const; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using "a" | "b" as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:78:40 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    76 │ function partialReduce(b: boolean): string | number | null { if (b) return "a"; return 1; }
+    77 │ function multiLiteralNarrow(b: boolean): string | null { if (b) return "a"; return "b"; }
+  > 78 │ function exactMatchDropNull(b: boolean): "a" | "b" | null { if (b) return "a"; return "b"; }
+       │                                        ^^^^^^^^^^^^^^^^^^
+    79 │ function asConstUnionAnnotation(): string | null { return "hello" as const; }
+    80 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using "a" | "b" as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:79:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    77 │ function multiLiteralNarrow(b: boolean): string | null { if (b) return "a"; return "b"; }
+    78 │ function exactMatchDropNull(b: boolean): "a" | "b" | null { if (b) return "a"; return "b"; }
+  > 79 │ function asConstUnionAnnotation(): string | null { return "hello" as const; }
+       │                                  ^^^^^^^^^^^^^^^
+    80 │ 
+    81 │ async function asyncUnionNull(): Promise<string | null> { return "hello"; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using "hello" as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:81:32 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    79 │ function asConstUnionAnnotation(): string | null { return "hello" as const; }
+    80 │ 
+  > 81 │ async function asyncUnionNull(): Promise<string | null> { return "hello"; }
+       │                                ^^^^^^^^^^^^^^^^^^^^^^^^
+    82 │ 
+    83 │ const arrowUnionNull = (): string | null => "hello";
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:83:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    81 │ async function asyncUnionNull(): Promise<string | null> { return "hello"; }
+    82 │ 
+  > 83 │ const arrowUnionNull = (): string | null => "hello";
+       │                          ^^^^^^^^^^^^^^^
+    84 │ 
+    85 │ class UnionClass { getValue(): string | null { return "hello"; } }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:85:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    83 │ const arrowUnionNull = (): string | null => "hello";
+    84 │ 
+  > 85 │ class UnionClass { getValue(): string | null { return "hello"; } }
+       │                              ^^^^^^^^^^^^^^^
+    86 │ 
+    87 │ const unionObj = { getValue(): string | null { return "hello"; } };
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:87:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    85 │ class UnionClass { getValue(): string | null { return "hello"; } }
+    86 │ 
+  > 87 │ const unionObj = { getValue(): string | null { return "hello"; } };
+       │                              ^^^^^^^^^^^^^^^
+    88 │ 
+    89 │ class UnionGetter { get value(): string | null { return "hello"; } }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:89:32 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    87 │ const unionObj = { getValue(): string | null { return "hello"; } };
+    88 │ 
+  > 89 │ class UnionGetter { get value(): string | null { return "hello"; } }
+       │                                ^^^^^^^^^^^^^^^
+    90 │ 
+    91 │ function nestedUnion(): string | (number | null) { return "hello"; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:91:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    89 │ class UnionGetter { get value(): string | null { return "hello"; } }
+    90 │ 
+  > 91 │ function nestedUnion(): string | (number | null) { return "hello"; }
+       │                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    92 │ 
+    93 │ type SimpleAlias = string | null;
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:94:28 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    93 │ type SimpleAlias = string | null;
+  > 94 │ function simpleAliasUnion(): SimpleAlias { return "hello"; }
+       │                            ^^^^^^^^^^^^^
+    95 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Consider using string as the return type.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   

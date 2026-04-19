@@ -158,3 +158,15 @@ function nestedTuple(): [{ ok: boolean }] { return [{ ok: true }]; }
 class StoreClass { get status(): string { if (Math.random() > 0.5) return "loading"; return "idle"; } set status(v: string) {} }
 const storeObj = { get status(): string { if (Math.random() > 0.5) return "loading"; return "idle"; }, set status(v: string) {} };
 class StaticStore { static get status(): string { if (Math.random() > 0.5) return "loading"; return "idle"; } static set status(v: string) {} }
+
+// Every union variant is returned — nothing to narrow
+declare const someStr: string;
+declare const someNum: number;
+function allVariantsCovered(b: 0 | 1 | 2): string | number | null {
+    if (b === 0) return someStr;
+    if (b === 1) return someNum;
+    return null;
+}
+
+// `any` contaminates the union — skip to avoid noisy diagnostics
+function unionWithAny(): string | any { return "hello"; }

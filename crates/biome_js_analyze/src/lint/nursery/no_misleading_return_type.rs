@@ -7,7 +7,7 @@ use biome_js_syntax::{
     JsVariableStatement, TsAsExpression, TsMethodSignatureClassMember, TsTypeAssertionExpression,
 };
 use biome_js_type_info::{Literal, Type, TypeData};
-use biome_rowan::{AstNode, TextRange, TokenText, declare_node_union};
+use biome_rowan::{AstNode, AstNodeList, TextRange, TokenText, declare_node_union};
 use biome_rule_options::no_misleading_return_type::NoMisleadingReturnTypeOptions;
 
 use crate::services::typed::Typed;
@@ -77,6 +77,17 @@ declare_node_union! {
 }
 
 impl AnyJsGetter {
+    /// Whether the getter is declared `static`.
+    fn is_static(&self) -> bool {
+        match self {
+            Self::JsGetterClassMember(getter) => getter
+                .modifiers()
+                .iter()
+                .any(|m| m.as_js_static_modifier().is_some()),
+            Self::JsGetterObjectMember(_) => false,
+        }
+    }
+
     /// Returns the canonical name of the getter's literal member name (quotes stripped).
     fn member_name(&self) -> Option<TokenText> {
         let literal_name = match self {
@@ -100,9 +111,9 @@ impl AnyJsGetter {
     /// namespace. TypeScript widens the getter's type to match the setter's
     /// parameter type, so the wider annotation is not misleading.
     fn has_matching_setter(&self, name: &TokenText) -> bool {
-        let getter_is_static = is_static_accessor(self.syntax());
+        let getter_is_static = self.is_static();
         self.sibling_setters().any(|setter| {
-            is_static_accessor(setter.syntax()) == getter_is_static
+            setter.is_static() == getter_is_static
                 && setter.member_name().is_some_and(|setter_name| setter_name == *name)
         })
     }
@@ -113,6 +124,17 @@ declare_node_union! {
 }
 
 impl AnyJsSetter {
+    /// Whether the setter is declared `static`.
+    fn is_static(&self) -> bool {
+        match self {
+            Self::JsSetterClassMember(setter) => setter
+                .modifiers()
+                .iter()
+                .any(|m| m.as_js_static_modifier().is_some()),
+            Self::JsSetterObjectMember(_) => false,
+        }
+    }
+
     /// Returns the canonical name of the setter's literal member name (quotes stripped).
     fn member_name(&self) -> Option<TokenText> {
         let literal_name = match self {
@@ -360,16 +382,6 @@ fn run_for_member_with_body(
         annotation_range,
         returns,
     })
-}
-
-/// Returns true if the accessor is declared `static`.
-fn is_static_accessor(node: &JsSyntaxNode) -> bool {
-    node.children()
-        .find(|child| child.kind() == JsSyntaxKind::JS_METHOD_MODIFIER_LIST)
-        .is_some_and(|list| {
-            list.children()
-                .any(|modifier| modifier.kind() == JsSyntaxKind::JS_STATIC_MODIFIER)
-        })
 }
 
 fn is_class_method_overload_implementation(method: &JsMethodClassMember) -> bool {

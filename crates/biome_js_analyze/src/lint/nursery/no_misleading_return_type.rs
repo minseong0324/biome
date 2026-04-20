@@ -6,7 +6,7 @@ use biome_js_syntax::{
     JsGetterObjectMember, JsMethodClassMember, JsMethodObjectMember, JsReturnStatement,
     JsSyntaxKind, JsSyntaxNode, JsVariableDeclarator, JsVariableStatement, TsAsExpression,
     TsInterfaceDeclaration, TsIntersectionType, TsMethodSignatureClassMember, TsReferenceType,
-    TsTypeAliasDeclaration, TsTypeAssertionExpression,
+    TsSatisfiesExpression, TsTypeAliasDeclaration, TsTypeAssertionExpression,
 };
 use biome_js_type_info::{Literal, Type, TypeData};
 use biome_rowan::{AstNode, TextRange, TokenText, declare_node_union};
@@ -262,56 +262,51 @@ fn run_for_member_with_body(
         return_ty.clone()
     };
 
-    let (returns, has_any_const_return, object_keyword_cast_count) =
-        collect_return_info(ctx, body);
+    let info = collect_return_info(ctx, body);
 
-    if returns.is_empty() {
+    if info.types.is_empty() {
         return None;
     }
 
-    if returns.len() == 1 && !has_any_const_return && is_literal_of_primitive(&returns[0]) {
+    if info.is_single_primitive_literal() {
         return None;
     }
 
-    if !returns.is_empty()
-        && !has_any_const_return
-        && matches!(&*effective_return_ty, TypeData::ObjectKeyword)
-        && object_keyword_cast_count == returns.len()
-    {
+    if info.all_opt_into_object() && matches!(&*effective_return_ty, TypeData::ObjectKeyword) {
         return None;
     }
 
     if matches!(&*effective_return_ty, TypeData::Boolean)
-        && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if b.as_bool())))
-        && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if !b.as_bool())))
+        && has_boolean_literal(&info.types, true)
+        && has_boolean_literal(&info.types, false)
     {
         return None;
     }
 
-    if returns.iter().any(is_any_contaminated) {
+    if info.types.iter().any(is_any_contaminated) {
         return None;
     }
 
     if includes_undefined(&effective_return_ty)
-        && !returns.iter().any(includes_undefined)
+        && !info.types.iter().any(includes_undefined)
     {
         return None;
     }
 
-    if returns.iter().any(is_intersection_with_type_param) {
+    if info.types.iter().any(is_intersection_with_type_param) {
         return None;
     }
 
-    if !has_any_const_return
-        && is_only_property_literal_widening(&effective_return_ty, &returns)
+    if !info.has_any_const
+        && is_only_property_literal_widening(&effective_return_ty, &info.types)
     {
         return None;
     }
 
     let is_misleading = if effective_return_ty.is_union() {
-        is_union_wider_than_returns(&effective_return_ty, &returns)
+        is_union_wider_than_returns(&effective_return_ty, &info.types)
     } else {
-        returns
+        info.types
             .iter()
             .all(|inferred| is_wider_than(&effective_return_ty, inferred))
     };
@@ -322,7 +317,7 @@ fn run_for_member_with_body(
 
     Some(RuleState {
         annotation_range,
-        returns,
+        returns: info.types,
     })
 }
 
@@ -620,43 +615,72 @@ fn build_inferred_description(returns: &[Type]) -> Option<String> {
     Some(result)
 }
 
+struct ReturnInfo {
+    types: Vec<Type>,
+    has_any_const: bool,
+    object_keyword_casts: usize,
+}
+
+impl ReturnInfo {
+    /// Single-return whose inferred type is a primitive literal and no `as const`.
+    fn is_single_primitive_literal(&self) -> bool {
+        self.types.len() == 1 && !self.has_any_const && is_literal_of_primitive(&self.types[0])
+    }
+
+    /// Every return carries an explicit `object`-keyword cast (and no `as const`).
+    fn all_opt_into_object(&self) -> bool {
+        !self.has_any_const && self.object_keyword_casts == self.types.len()
+    }
+}
+
+/// Extracts the value of a boolean literal type, if the type is one.
+fn as_boolean_literal(ty: &Type) -> Option<bool> {
+    let TypeData::Literal(lit) = &**ty else {
+        return None;
+    };
+    let Literal::Boolean(b) = lit.as_ref() else {
+        return None;
+    };
+    Some(b.as_bool())
+}
+
+/// Whether any type in `types` is the boolean literal `value`.
+fn has_boolean_literal(types: &[Type], value: bool) -> bool {
+    types.iter().any(|ty| as_boolean_literal(ty) == Some(value))
+}
+
 /// Collects return types, `as const` usage, and the number of `object`-keyword
 /// type assertions from a function body.
 fn collect_return_info(
     ctx: &RuleContext<NoMisleadingReturnType>,
     body: &AnyJsFunctionBody,
-) -> (Vec<Type>, bool, usize) {
-    let mut has_any_const = false;
-    let mut object_keyword_cast_count = 0usize;
-
-    let types = match body {
-        AnyJsFunctionBody::JsFunctionBody(block) => collect_block_returns(
-            ctx,
-            block,
-            &mut has_any_const,
-            &mut object_keyword_cast_count,
-        ),
-        AnyJsFunctionBody::AnyJsExpression(expr) => {
-            if has_const_assertion(expr) {
-                has_any_const = true;
-            } else if has_object_keyword_assertion(expr) {
-                object_keyword_cast_count += 1;
-            }
-            vec![infer_expression_type(ctx, expr)]
-        }
+) -> ReturnInfo {
+    let mut info = ReturnInfo {
+        types: Vec::new(),
+        has_any_const: false,
+        object_keyword_casts: 0,
     };
 
-    (types, has_any_const, object_keyword_cast_count)
+    match body {
+        AnyJsFunctionBody::JsFunctionBody(block) => collect_block_returns(ctx, block, &mut info),
+        AnyJsFunctionBody::AnyJsExpression(expr) => {
+            if has_const_assertion(expr) {
+                info.has_any_const = true;
+            } else if has_object_keyword_assertion(expr) {
+                info.object_keyword_casts += 1;
+            }
+            info.types.push(infer_expression_type(ctx, expr));
+        }
+    }
+
+    info
 }
 
 fn collect_block_returns(
     ctx: &RuleContext<NoMisleadingReturnType>,
     block: &JsFunctionBody,
-    has_any_const: &mut bool,
-    object_keyword_cast_count: &mut usize,
-) -> Vec<Type> {
-    let mut returns = Vec::new();
-
+    info: &mut ReturnInfo,
+) {
     for node in block
         .syntax()
         .pruned_descendents(|n| !is_nested_function_like(n))
@@ -668,15 +692,35 @@ fn collect_block_returns(
             && let Some(expr) = AnyJsExpression::cast(arg.syntax().clone())
         {
             if has_const_assertion(&expr) {
-                *has_any_const = true;
+                info.has_any_const = true;
             } else if has_object_keyword_assertion(&expr) {
-                *object_keyword_cast_count += 1;
+                info.object_keyword_casts += 1;
             }
-            returns.push(infer_expression_type(ctx, &expr));
+            info.types.push(infer_expression_type(ctx, &expr));
+        }
+    }
+}
+
+declare_node_union! {
+    AnyTsCastExpression = TsAsExpression | TsSatisfiesExpression | TsTypeAssertionExpression
+}
+
+impl AnyTsCastExpression {
+    fn cast_type(&self) -> Option<AnyTsType> {
+        match self {
+            Self::TsAsExpression(e) => e.ty().ok(),
+            Self::TsSatisfiesExpression(e) => e.ty().ok(),
+            Self::TsTypeAssertionExpression(e) => e.ty().ok(),
         }
     }
 
-    returns
+    fn inner_expression(&self) -> Option<AnyJsExpression> {
+        match self {
+            Self::TsAsExpression(e) => e.expression().ok(),
+            Self::TsSatisfiesExpression(e) => e.expression().ok(),
+            Self::TsTypeAssertionExpression(e) => e.expression().ok(),
+        }
+    }
 }
 
 /// Whether the expression is a type assertion that opts into `object` widening.
@@ -684,31 +728,16 @@ fn collect_block_returns(
 fn has_object_keyword_assertion(expression: &AnyJsExpression) -> bool {
     let mut stack = vec![expression.clone()];
     while let Some(current_expression) = stack.pop() {
+        if let Some(cast) = AnyTsCastExpression::cast(current_expression.syntax().clone()) {
+            let Some(cast_type) = cast.cast_type() else {
+                return false;
+            };
+            if !cast_target_trustworthy(&cast_type, cast.syntax()) {
+                return false;
+            }
+            continue;
+        }
         match current_expression {
-            AnyJsExpression::TsAsExpression(as_expression) => {
-                let Ok(cast_type) = as_expression.ty() else {
-                    return false;
-                };
-                if !cast_target_trustworthy(&cast_type, as_expression.syntax()) {
-                    return false;
-                }
-            }
-            AnyJsExpression::TsSatisfiesExpression(satisfies_expression) => {
-                let Ok(cast_type) = satisfies_expression.ty() else {
-                    return false;
-                };
-                if !cast_target_trustworthy(&cast_type, satisfies_expression.syntax()) {
-                    return false;
-                }
-            }
-            AnyJsExpression::TsTypeAssertionExpression(type_assertion_expression) => {
-                let Ok(cast_type) = type_assertion_expression.ty() else {
-                    return false;
-                };
-                if !cast_target_trustworthy(&cast_type, type_assertion_expression.syntax()) {
-                    return false;
-                }
-            }
             AnyJsExpression::JsParenthesizedExpression(parenthesized_expression) => {
                 let Ok(inner_expression) = parenthesized_expression.expression() else {
                     return false;
@@ -952,19 +981,14 @@ fn resolve_identifier_initializer_type(
 fn unwrap_type_wrappers(expr: &AnyJsExpression) -> AnyJsExpression {
     let mut current = expr.clone();
     loop {
+        if let Some(cast) = AnyTsCastExpression::cast(current.syntax().clone()) {
+            let Some(inner) = cast.inner_expression() else {
+                return current;
+            };
+            current = inner;
+            continue;
+        }
         match &current {
-            AnyJsExpression::TsAsExpression(e) => match e.expression() {
-                Ok(inner) => current = inner,
-                Err(_) => return current,
-            },
-            AnyJsExpression::TsSatisfiesExpression(e) => match e.expression() {
-                Ok(inner) => current = inner,
-                Err(_) => return current,
-            },
-            AnyJsExpression::TsTypeAssertionExpression(e) => match e.expression() {
-                Ok(inner) => current = inner,
-                Err(_) => return current,
-            },
             AnyJsExpression::JsParenthesizedExpression(e) => match e.expression() {
                 Ok(inner) => current = inner,
                 Err(_) => return current,

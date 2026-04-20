@@ -67,3 +67,37 @@ class GetterClass { get code(): number { if (Math.random() > 0.5) return 200; re
 const getterObj = { get code(): number { if (Math.random() > 0.5) return 200; return 404; } };
 
 class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
+
+function objectWider(): object { return { retry: true }; }
+
+class Foo { x = 1; }
+function objectFromClass(): object { return new Foo(); }
+
+function variantObject(b: boolean): object { if (b) return { a: 1 }; return { b: 2 }; }
+
+function mixedBareAndCast(b: boolean): object { if (b) return {} as object; return { a: 1 }; }
+
+declare const apiResponse: { a: number };
+function resolvedObject(): object { return apiResponse; }
+
+function castNarrowLiteral(): object { return {} as { a: number }; }
+type NarrowShape = { a: number };
+function castNarrowAlias(): object { return {} as NarrowShape; }
+class MyLocalClass { y = 1; }
+function castLocalClass(): object { return new MyLocalClass() as MyLocalClass; }
+interface MyLocalInterface { z: string; }
+function castLocalInterface(): object { return { z: "x" } as MyLocalInterface; }
+
+type NarrowIntersection = { a: number } & { b: string };
+function castNarrowIntersection(): object { return {} as NarrowIntersection; }
+function inlineNarrowIntersection(): object {
+    return {} as ({ a: number } & { b: string });
+}
+
+async function asyncObjectWider(): Promise<object> { return { a: 1 }; }
+
+class ObjectMethodClass { m(): object { return { a: 1 }; } }
+
+const objectMethodObj = { m(): object { return { a: 1 }; } };
+
+function asConstObjectAnnotation(): object { return { a: 1 } as const; }

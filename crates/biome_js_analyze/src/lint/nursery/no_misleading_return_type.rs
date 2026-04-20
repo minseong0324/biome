@@ -1,13 +1,13 @@
 use biome_analyze::{Rule, RuleDiagnostic, RuleDomain, context::RuleContext, declare_lint_rule};
 use biome_console::markup;
 use biome_js_syntax::{
-    AnyJsExpression, AnyJsFunction, AnyJsFunctionBody, JsFunctionBody, JsGetterClassMember,
-    JsGetterObjectMember, JsMethodClassMember, JsMethodObjectMember, JsReturnStatement,
-    JsSetterClassMember, JsSetterObjectMember, JsSyntaxKind, JsSyntaxNode, JsVariableDeclarator,
-    JsVariableStatement, TsAsExpression, TsMethodSignatureClassMember, TsTypeAssertionExpression,
+    AnyJsExpression, AnyJsFunction, AnyJsFunctionBody, AnyJsGetter, JsFunctionBody,
+    JsGetterClassMember, JsGetterObjectMember, JsMethodClassMember, JsMethodObjectMember,
+    JsReturnStatement, JsSyntaxKind, JsSyntaxNode, JsVariableDeclarator, JsVariableStatement,
+    TsAsExpression, TsMethodSignatureClassMember, TsTypeAssertionExpression,
 };
 use biome_js_type_info::{Literal, Type, TypeData};
-use biome_rowan::{AstNode, AstNodeList, TextRange, TokenText, declare_node_union};
+use biome_rowan::{AstNode, TextRange, TokenText, declare_node_union};
 use biome_rule_options::no_misleading_return_type::NoMisleadingReturnTypeOptions;
 
 use crate::services::typed::Typed;
@@ -70,79 +70,6 @@ declare_node_union! {
         | JsMethodObjectMember
         | JsGetterClassMember
         | JsGetterObjectMember
-}
-
-declare_node_union! {
-    pub AnyJsGetter = JsGetterClassMember | JsGetterObjectMember
-}
-
-impl AnyJsGetter {
-    /// Whether the getter is declared `static`.
-    fn is_static(&self) -> bool {
-        match self {
-            Self::JsGetterClassMember(getter) => getter
-                .modifiers()
-                .iter()
-                .any(|m| m.as_js_static_modifier().is_some()),
-            Self::JsGetterObjectMember(_) => false,
-        }
-    }
-
-    /// Returns the canonical name of the getter's literal member name (quotes stripped).
-    fn member_name(&self) -> Option<TokenText> {
-        let literal_name = match self {
-            Self::JsGetterClassMember(m) => m.name().ok()?.as_js_literal_member_name().cloned()?,
-            Self::JsGetterObjectMember(m) => m.name().ok()?.as_js_literal_member_name().cloned()?,
-        };
-        literal_name.name().ok()
-    }
-
-    /// Iterator over setter siblings declared in the same class or object
-    /// member list as this getter.
-    fn sibling_setters(&self) -> impl Iterator<Item = AnyJsSetter> {
-        self.syntax()
-            .parent()
-            .into_iter()
-            .flat_map(|parent| parent.children())
-            .filter_map(AnyJsSetter::cast)
-    }
-
-    /// Returns true if the getter has a same-named sibling setter in the same
-    /// namespace. TypeScript widens the getter's type to match the setter's
-    /// parameter type, so the wider annotation is not misleading.
-    fn has_matching_setter(&self, name: &TokenText) -> bool {
-        let getter_is_static = self.is_static();
-        self.sibling_setters().any(|setter| {
-            setter.is_static() == getter_is_static
-                && setter.member_name().is_some_and(|setter_name| setter_name == *name)
-        })
-    }
-}
-
-declare_node_union! {
-    pub AnyJsSetter = JsSetterClassMember | JsSetterObjectMember
-}
-
-impl AnyJsSetter {
-    /// Whether the setter is declared `static`.
-    fn is_static(&self) -> bool {
-        match self {
-            Self::JsSetterClassMember(setter) => setter
-                .modifiers()
-                .iter()
-                .any(|m| m.as_js_static_modifier().is_some()),
-            Self::JsSetterObjectMember(_) => false,
-        }
-    }
-
-    /// Returns the canonical name of the setter's literal member name (quotes stripped).
-    fn member_name(&self) -> Option<TokenText> {
-        let literal_name = match self {
-            Self::JsSetterClassMember(m) => m.name().ok()?.as_js_literal_member_name().cloned()?,
-            Self::JsSetterObjectMember(m) => m.name().ok()?.as_js_literal_member_name().cloned()?,
-        };
-        literal_name.name().ok()
-    }
 }
 
 pub struct RuleState {

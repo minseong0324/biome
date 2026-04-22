@@ -53,6 +53,12 @@ declare_lint_rule! {
     /// ```ts
     /// class Foo { greet(): string { return "hello"; } }
     /// ```
+    ///
+    /// ## Known limitations
+    ///
+    /// Suggested replacement types are only shown when their textual
+    /// representation is up to 80 characters long. Longer unions fall back to
+    /// a generic note without the specific suggestion.
     pub NoMisleadingReturnType {
         version: "2.4.11",
         name: "noMisleadingReturnType",

@@ -81,8 +81,6 @@ function objectFromClass(): object { return new Foo(); }
 
 function variantObject(b: boolean): object { if (b) return { a: 1 }; return { b: 2 }; }
 
-function mixedBareAndCast(b: boolean): object { if (b) return {} as object; return { a: 1 }; }
-
 declare const apiResponse: { a: number };
 function resolvedObject(): object { return apiResponse; }
 
@@ -115,6 +113,7 @@ function fnExprReturn(): object { return (): void => {}; }
 function fnDeclReturn(): object { function bar() {} return bar; }
 
 function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
+function satisfiesObjectStillNarrow(): object { return { a: 1 } satisfies object; }
 function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
 function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
 
@@ -127,9 +126,8 @@ function intersectionNarrowAlias(): object { return {} as ObjectAndNarrowShape; 
 
 interface NarrowInterface { a: number; }
 function narrowInterfaceCast(): object { return {} as NarrowInterface; }
-interface InterfaceExtending extends NarrowInterface {}
-function extendingInterfaceCast(): object { return {} as InterfaceExtending; }
-function conditionalOneBranchNarrow(): object { return {} as (true extends true ? object : { a: 1 }); }
+
+function ternaryObjectBranch(b: boolean): object { return b ? {} : { a: 1 }; }
 
 ```
 
@@ -921,7 +919,7 @@ invalid.ts:76:35 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   > 76 │ function variantObject(b: boolean): object { if (b) return { a: 1 }; return { b: 2 }; }
        │                                   ^^^^^^^^
     77 │ 
-    78 │ function mixedBareAndCast(b: boolean): object { if (b) return {} as object; return { a: 1 }; }
+    78 │ declare const apiResponse: { a: number };
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -935,38 +933,15 @@ invalid.ts:76:35 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:78:38 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:79:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    76 │ function variantObject(b: boolean): object { if (b) return { a: 1 }; return { b: 2 }; }
-    77 │ 
-  > 78 │ function mixedBareAndCast(b: boolean): object { if (b) return {} as object; return { a: 1 }; }
-       │                                      ^^^^^^^^
-    79 │ 
-    80 │ declare const apiResponse: { a: number };
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:81:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    80 │ declare const apiResponse: { a: number };
-  > 81 │ function resolvedObject(): object { return apiResponse; }
+    78 │ declare const apiResponse: { a: number };
+  > 79 │ function resolvedObject(): object { return apiResponse; }
        │                          ^^^^^^^^
-    82 │ 
-    83 │ function castNarrowLiteral(): object { return {} as { a: number }; }
+    80 │ 
+    81 │ function castNarrowLiteral(): object { return {} as { a: number }; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -980,16 +955,16 @@ invalid.ts:81:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:83:29 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:81:29 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    81 │ function resolvedObject(): object { return apiResponse; }
-    82 │ 
-  > 83 │ function castNarrowLiteral(): object { return {} as { a: number }; }
+    79 │ function resolvedObject(): object { return apiResponse; }
+    80 │ 
+  > 81 │ function castNarrowLiteral(): object { return {} as { a: number }; }
        │                             ^^^^^^^^
-    84 │ type NarrowShape = { a: number };
-    85 │ function castNarrowAlias(): object { return {} as NarrowShape; }
+    82 │ type NarrowShape = { a: number };
+    83 │ function castNarrowAlias(): object { return {} as NarrowShape; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1003,16 +978,16 @@ invalid.ts:83:29 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:85:27 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:83:27 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    83 │ function castNarrowLiteral(): object { return {} as { a: number }; }
-    84 │ type NarrowShape = { a: number };
-  > 85 │ function castNarrowAlias(): object { return {} as NarrowShape; }
+    81 │ function castNarrowLiteral(): object { return {} as { a: number }; }
+    82 │ type NarrowShape = { a: number };
+  > 83 │ function castNarrowAlias(): object { return {} as NarrowShape; }
        │                           ^^^^^^^^
-    86 │ class MyLocalClass { y = 1; }
-    87 │ function castLocalClass(): object { return new MyLocalClass() as MyLocalClass; }
+    84 │ class MyLocalClass { y = 1; }
+    85 │ function castLocalClass(): object { return new MyLocalClass() as MyLocalClass; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1026,16 +1001,16 @@ invalid.ts:85:27 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:87:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:85:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    85 │ function castNarrowAlias(): object { return {} as NarrowShape; }
-    86 │ class MyLocalClass { y = 1; }
-  > 87 │ function castLocalClass(): object { return new MyLocalClass() as MyLocalClass; }
+    83 │ function castNarrowAlias(): object { return {} as NarrowShape; }
+    84 │ class MyLocalClass { y = 1; }
+  > 85 │ function castLocalClass(): object { return new MyLocalClass() as MyLocalClass; }
        │                          ^^^^^^^^
-    88 │ interface MyLocalInterface { z: string; }
-    89 │ function castLocalInterface(): object { return { z: "x" } as MyLocalInterface; }
+    86 │ interface MyLocalInterface { z: string; }
+    87 │ function castLocalInterface(): object { return { z: "x" } as MyLocalInterface; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1049,16 +1024,16 @@ invalid.ts:87:26 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:89:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:87:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    87 │ function castLocalClass(): object { return new MyLocalClass() as MyLocalClass; }
-    88 │ interface MyLocalInterface { z: string; }
-  > 89 │ function castLocalInterface(): object { return { z: "x" } as MyLocalInterface; }
+    85 │ function castLocalClass(): object { return new MyLocalClass() as MyLocalClass; }
+    86 │ interface MyLocalInterface { z: string; }
+  > 87 │ function castLocalInterface(): object { return { z: "x" } as MyLocalInterface; }
        │                              ^^^^^^^^
-    90 │ 
-    91 │ type NarrowIntersection = { a: number } & { b: string };
+    88 │ 
+    89 │ type NarrowIntersection = { a: number } & { b: string };
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1072,15 +1047,15 @@ invalid.ts:89:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:92:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:90:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    91 │ type NarrowIntersection = { a: number } & { b: string };
-  > 92 │ function castNarrowIntersection(): object { return {} as NarrowIntersection; }
+    89 │ type NarrowIntersection = { a: number } & { b: string };
+  > 90 │ function castNarrowIntersection(): object { return {} as NarrowIntersection; }
        │                                  ^^^^^^^^
-    93 │ function inlineNarrowIntersection(): object {
-    94 │     return {} as ({ a: number } & { b: string });
+    91 │ function inlineNarrowIntersection(): object {
+    92 │     return {} as ({ a: number } & { b: string });
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1094,16 +1069,16 @@ invalid.ts:92:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:93:36 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:91:36 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    91 │ type NarrowIntersection = { a: number } & { b: string };
-    92 │ function castNarrowIntersection(): object { return {} as NarrowIntersection; }
-  > 93 │ function inlineNarrowIntersection(): object {
+    89 │ type NarrowIntersection = { a: number } & { b: string };
+    90 │ function castNarrowIntersection(): object { return {} as NarrowIntersection; }
+  > 91 │ function inlineNarrowIntersection(): object {
        │                                    ^^^^^^^^
-    94 │     return {} as ({ a: number } & { b: string });
-    95 │ }
+    92 │     return {} as ({ a: number } & { b: string });
+    93 │ }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1117,16 +1092,39 @@ invalid.ts:93:36 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:97:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:95:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    95 │ }
-    96 │ 
-  > 97 │ async function asyncObjectWider(): Promise<object> { return { a: 1 }; }
+    93 │ }
+    94 │ 
+  > 95 │ async function asyncObjectWider(): Promise<object> { return { a: 1 }; }
        │                                  ^^^^^^^^^^^^^^^^^
+    96 │ 
+    97 │ class ObjectMethodClass { m(): object { return { a: 1 }; } }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:97:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    95 │ async function asyncObjectWider(): Promise<object> { return { a: 1 }; }
+    96 │ 
+  > 97 │ class ObjectMethodClass { m(): object { return { a: 1 }; } }
+       │                              ^^^^^^^^
     98 │ 
-    99 │ class ObjectMethodClass { m(): object { return { a: 1 }; } }
+    99 │ const objectMethodObj = { m(): object { return { a: 1 }; } };
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1144,12 +1142,12 @@ invalid.ts:99:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-     97 │ async function asyncObjectWider(): Promise<object> { return { a: 1 }; }
+     97 │ class ObjectMethodClass { m(): object { return { a: 1 }; } }
      98 │ 
-   > 99 │ class ObjectMethodClass { m(): object { return { a: 1 }; } }
+   > 99 │ const objectMethodObj = { m(): object { return { a: 1 }; } };
         │                              ^^^^^^^^
     100 │ 
-    101 │ const objectMethodObj = { m(): object { return { a: 1 }; } };
+    101 │ function asConstObjectAnnotation(): object { return { a: 1 } as const; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1163,39 +1161,16 @@ invalid.ts:99:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━
 ```
 
 ```
-invalid.ts:101:30 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:101:35 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-     99 │ class ObjectMethodClass { m(): object { return { a: 1 }; } }
+     99 │ const objectMethodObj = { m(): object { return { a: 1 }; } };
     100 │ 
-  > 101 │ const objectMethodObj = { m(): object { return { a: 1 }; } };
-        │                              ^^^^^^^^
-    102 │ 
-    103 │ function asConstObjectAnnotation(): object { return { a: 1 } as const; }
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:103:35 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    101 │ const objectMethodObj = { m(): object { return { a: 1 }; } };
-    102 │ 
-  > 103 │ function asConstObjectAnnotation(): object { return { a: 1 } as const; }
+  > 101 │ function asConstObjectAnnotation(): object { return { a: 1 } as const; }
         │                                   ^^^^^^^^
-    104 │ 
-    105 │ function arrayReturn(): object { return [1, 2, 3]; }
+    102 │ 
+    103 │ function arrayReturn(): object { return [1, 2, 3]; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1209,16 +1184,16 @@ invalid.ts:103:35 lint/nursery/noMisleadingReturnType ━━━━━━━━�
 ```
 
 ```
-invalid.ts:105:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:103:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    103 │ function asConstObjectAnnotation(): object { return { a: 1 } as const; }
-    104 │ 
-  > 105 │ function arrayReturn(): object { return [1, 2, 3]; }
+    101 │ function asConstObjectAnnotation(): object { return { a: 1 } as const; }
+    102 │ 
+  > 103 │ function arrayReturn(): object { return [1, 2, 3]; }
         │                       ^^^^^^^^
-    106 │ function arrayEmpty(): object { return []; }
-    107 │ function regexpReturn(): object { return /foo/; }
+    104 │ function arrayEmpty(): object { return []; }
+    105 │ function regexpReturn(): object { return /foo/; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1232,15 +1207,61 @@ invalid.ts:105:23 lint/nursery/noMisleadingReturnType ━━━━━━━━�
 ```
 
 ```
-invalid.ts:106:22 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:104:22 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    105 │ function arrayReturn(): object { return [1, 2, 3]; }
-  > 106 │ function arrayEmpty(): object { return []; }
+    103 │ function arrayReturn(): object { return [1, 2, 3]; }
+  > 104 │ function arrayEmpty(): object { return []; }
         │                      ^^^^^^^^
-    107 │ function regexpReturn(): object { return /foo/; }
-    108 │ function fnExprReturn(): object { return (): void => {}; }
+    105 │ function regexpReturn(): object { return /foo/; }
+    106 │ function fnExprReturn(): object { return (): void => {}; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:105:24 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    103 │ function arrayReturn(): object { return [1, 2, 3]; }
+    104 │ function arrayEmpty(): object { return []; }
+  > 105 │ function regexpReturn(): object { return /foo/; }
+        │                        ^^^^^^^^
+    106 │ function fnExprReturn(): object { return (): void => {}; }
+    107 │ function fnDeclReturn(): object { function bar() {} return bar; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:106:24 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    104 │ function arrayEmpty(): object { return []; }
+    105 │ function regexpReturn(): object { return /foo/; }
+  > 106 │ function fnExprReturn(): object { return (): void => {}; }
+        │                        ^^^^^^^^
+    107 │ function fnDeclReturn(): object { function bar() {} return bar; }
+    108 │ 
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1258,12 +1279,12 @@ invalid.ts:107:24 lint/nursery/noMisleadingReturnType ━━━━━━━━�
 
   i The return type annotation is wider than what the function actually returns.
   
-    105 │ function arrayReturn(): object { return [1, 2, 3]; }
-    106 │ function arrayEmpty(): object { return []; }
-  > 107 │ function regexpReturn(): object { return /foo/; }
+    105 │ function regexpReturn(): object { return /foo/; }
+    106 │ function fnExprReturn(): object { return (): void => {}; }
+  > 107 │ function fnDeclReturn(): object { function bar() {} return bar; }
         │                        ^^^^^^^^
-    108 │ function fnExprReturn(): object { return (): void => {}; }
-    109 │ function fnDeclReturn(): object { function bar() {} return bar; }
+    108 │ 
+    109 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1277,62 +1298,16 @@ invalid.ts:107:24 lint/nursery/noMisleadingReturnType ━━━━━━━━�
 ```
 
 ```
-invalid.ts:108:24 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:109:27 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    106 │ function arrayEmpty(): object { return []; }
-    107 │ function regexpReturn(): object { return /foo/; }
-  > 108 │ function fnExprReturn(): object { return (): void => {}; }
-        │                        ^^^^^^^^
-    109 │ function fnDeclReturn(): object { function bar() {} return bar; }
-    110 │ 
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:109:24 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    107 │ function regexpReturn(): object { return /foo/; }
-    108 │ function fnExprReturn(): object { return (): void => {}; }
-  > 109 │ function fnDeclReturn(): object { function bar() {} return bar; }
-        │                        ^^^^^^^^
-    110 │ 
-    111 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:111:27 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    109 │ function fnDeclReturn(): object { function bar() {} return bar; }
-    110 │ 
-  > 111 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
+    107 │ function fnDeclReturn(): object { function bar() {} return bar; }
+    108 │ 
+  > 109 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
         │                           ^^^^^^^^
-    112 │ function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
-    113 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
+    110 │ function satisfiesObjectStillNarrow(): object { return { a: 1 } satisfies object; }
+    111 │ function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
   
   i A wider return type hides the precise types that callers could rely on.
   
@@ -1346,195 +1321,195 @@ invalid.ts:111:27 lint/nursery/noMisleadingReturnType ━━━━━━━━�
 ```
 
 ```
-invalid.ts:112:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+invalid.ts:110:38 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   i The return type annotation is wider than what the function actually returns.
   
-    111 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
-  > 112 │ function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
-        │                       ^^^^^^^^
-    113 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
-    114 │ 
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:113:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    111 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
-    112 │ function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
-  > 113 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
-        │                                 ^^^^^^^^
-    114 │ 
-    115 │ function mixedEmptyAndNonEmpty(b: boolean): object { if (b) return {}; return { a: 1 }; }
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:115:43 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    113 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
-    114 │ 
-  > 115 │ function mixedEmptyAndNonEmpty(b: boolean): object { if (b) return {}; return { a: 1 }; }
-        │                                           ^^^^^^^^
-    116 │ function spreadReturn(x: { a: number }): object { return { ...x }; }
-    117 │ 
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:116:40 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    115 │ function mixedEmptyAndNonEmpty(b: boolean): object { if (b) return {}; return { a: 1 }; }
-  > 116 │ function spreadReturn(x: { a: number }): object { return { ...x }; }
-        │                                        ^^^^^^^^
-    117 │ 
-    118 │ type ObjectAndNarrowShape = object & { a: number };
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:119:36 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    118 │ type ObjectAndNarrowShape = object & { a: number };
-  > 119 │ function intersectionNarrowMember(): object { return {} as object & { a: number }; }
-        │                                    ^^^^^^^^
-    120 │ function intersectionNarrowAlias(): object { return {} as ObjectAndNarrowShape; }
-    121 │ 
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:120:35 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    118 │ type ObjectAndNarrowShape = object & { a: number };
-    119 │ function intersectionNarrowMember(): object { return {} as object & { a: number }; }
-  > 120 │ function intersectionNarrowAlias(): object { return {} as ObjectAndNarrowShape; }
-        │                                   ^^^^^^^^
-    121 │ 
-    122 │ interface NarrowInterface { a: number; }
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:123:31 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    122 │ interface NarrowInterface { a: number; }
-  > 123 │ function narrowInterfaceCast(): object { return {} as NarrowInterface; }
-        │                               ^^^^^^^^
-    124 │ interface InterfaceExtending extends NarrowInterface {}
-    125 │ function extendingInterfaceCast(): object { return {} as InterfaceExtending; }
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:125:34 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    123 │ function narrowInterfaceCast(): object { return {} as NarrowInterface; }
-    124 │ interface InterfaceExtending extends NarrowInterface {}
-  > 125 │ function extendingInterfaceCast(): object { return {} as InterfaceExtending; }
-        │                                  ^^^^^^^^
-    126 │ function conditionalOneBranchNarrow(): object { return {} as (true extends true ? object : { a: 1 }); }
-    127 │ 
-  
-  i A wider return type hides the precise types that callers could rely on.
-  
-  i Narrow the return type to match what the function actually returns.
-  
-  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
-  
-  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
-  
-
-```
-
-```
-invalid.ts:126:38 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  i The return type annotation is wider than what the function actually returns.
-  
-    124 │ interface InterfaceExtending extends NarrowInterface {}
-    125 │ function extendingInterfaceCast(): object { return {} as InterfaceExtending; }
-  > 126 │ function conditionalOneBranchNarrow(): object { return {} as (true extends true ? object : { a: 1 }); }
+    109 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
+  > 110 │ function satisfiesObjectStillNarrow(): object { return { a: 1 } satisfies object; }
         │                                      ^^^^^^^^
-    127 │ 
+    111 │ function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
+    112 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:111:23 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    109 │ function satisfiesNarrow(): object { return { a: 1 } satisfies { a: number }; }
+    110 │ function satisfiesObjectStillNarrow(): object { return { a: 1 } satisfies object; }
+  > 111 │ function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
+        │                       ^^^^^^^^
+    112 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
+    113 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:112:33 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    110 │ function satisfiesObjectStillNarrow(): object { return { a: 1 } satisfies object; }
+    111 │ function angleNarrow(): object { return <{ a: number }>{ a: 1 }; }
+  > 112 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
+        │                                 ^^^^^^^^
+    113 │ 
+    114 │ function mixedEmptyAndNonEmpty(b: boolean): object { if (b) return {}; return { a: 1 }; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:114:43 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    112 │ function identifierBoundNarrow(): object { const x = { a: 1 }; return x; }
+    113 │ 
+  > 114 │ function mixedEmptyAndNonEmpty(b: boolean): object { if (b) return {}; return { a: 1 }; }
+        │                                           ^^^^^^^^
+    115 │ function spreadReturn(x: { a: number }): object { return { ...x }; }
+    116 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:115:40 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    114 │ function mixedEmptyAndNonEmpty(b: boolean): object { if (b) return {}; return { a: 1 }; }
+  > 115 │ function spreadReturn(x: { a: number }): object { return { ...x }; }
+        │                                        ^^^^^^^^
+    116 │ 
+    117 │ type ObjectAndNarrowShape = object & { a: number };
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:118:36 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    117 │ type ObjectAndNarrowShape = object & { a: number };
+  > 118 │ function intersectionNarrowMember(): object { return {} as object & { a: number }; }
+        │                                    ^^^^^^^^
+    119 │ function intersectionNarrowAlias(): object { return {} as ObjectAndNarrowShape; }
+    120 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:119:35 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    117 │ type ObjectAndNarrowShape = object & { a: number };
+    118 │ function intersectionNarrowMember(): object { return {} as object & { a: number }; }
+  > 119 │ function intersectionNarrowAlias(): object { return {} as ObjectAndNarrowShape; }
+        │                                   ^^^^^^^^
+    120 │ 
+    121 │ interface NarrowInterface { a: number; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:122:31 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    121 │ interface NarrowInterface { a: number; }
+  > 122 │ function narrowInterfaceCast(): object { return {} as NarrowInterface; }
+        │                               ^^^^^^^^
+    123 │ 
+    124 │ function ternaryObjectBranch(b: boolean): object { return b ? {} : { a: 1 }; }
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:124:41 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    122 │ function narrowInterfaceCast(): object { return {} as NarrowInterface; }
+    123 │ 
+  > 124 │ function ternaryObjectBranch(b: boolean): object { return b ? {} : { a: 1 }; }
+        │                                         ^^^^^^^^
+    125 │ 
   
   i A wider return type hides the precise types that callers could rely on.
   

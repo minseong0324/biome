@@ -101,18 +101,14 @@ declare_lint_rule! {
     }
 }
 
-pub struct RuleState {
-    missing_cases: Vec<MissingCase>,
-}
-
-enum MissingCase {
+pub enum MissingCase {
     Type(Type),
     BooleanLiteral(bool),
 }
 
 impl Rule for UseExhaustiveSwitchCases {
     type Query = Typed<JsSwitchStatement>;
-    type State = RuleState;
+    type State = Vec<MissingCase>;
     type Signals = Option<Self::State>;
     type Options = UseExhaustiveSwitchCasesOptions;
 
@@ -190,7 +186,7 @@ impl Rule for UseExhaustiveSwitchCases {
             return None;
         }
 
-        Some(RuleState { missing_cases })
+        Some(missing_cases)
     }
 
     fn diagnostic(ctx: &RuleContext<Self>, state: &Self::State) -> Option<RuleDiagnostic> {
@@ -205,7 +201,7 @@ impl Rule for UseExhaustiveSwitchCases {
             .note("Some variants of the union type are not handled here.")
             .footer_list(
                 "These cases are missing:",
-                state.missing_cases.iter().map(missing_case_to_string),
+                state.iter().map(missing_case_to_string),
             ),
         )
     }
@@ -255,7 +251,7 @@ impl Rule for UseExhaustiveSwitchCases {
         .build()
         .into();
 
-        for ty in &state.missing_cases {
+        for ty in state {
             let mut case_token =
                 make::token(T![case]).with_trailing_trivia([(TriviaPieceKind::Whitespace, " ")]);
 

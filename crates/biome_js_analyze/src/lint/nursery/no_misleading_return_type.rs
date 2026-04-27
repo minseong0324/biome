@@ -266,13 +266,6 @@ fn run_for_member_with_body(
         return None;
     }
 
-    if matches!(&*effective_return_ty, TypeData::Boolean)
-        && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if b.as_bool())))
-        && returns.iter().any(|ty| matches!(&**ty, TypeData::Literal(lit) if matches!(lit.as_ref(), Literal::Boolean(b) if !b.as_bool())))
-    {
-        return None;
-    }
-
     if returns.iter().any(is_any_contaminated) {
         return None;
     }
@@ -606,6 +599,7 @@ fn build_inferred_description(returns: &[Type]) -> Option<String> {
 }
 
 /// Collects return types and tracks `as const` usage from a function body.
+/// Boolean return literals use the same canonical form as [`TypeData::union_of`].
 fn collect_return_info(
     ctx: &RuleContext<NoMisleadingReturnType>,
     body: &AnyJsFunctionBody,
@@ -623,6 +617,8 @@ fn collect_return_info(
             vec![infer_expression_type(ctx, expr)]
         }
     };
+
+    let types = Type::normalized_boolean_union_variants(types);
 
     (types, has_any_const)
 }

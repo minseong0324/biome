@@ -221,10 +221,11 @@ define_global_type!(
     51,
     "AsyncDisposable[Symbol.asyncDispose]"
 );
+define_global_type!(BOOLEAN_ID, BOOLEAN_ID_NAME, 52, "boolean");
 
 /// Total number of predefined types.
 /// Must be one more than the highest TypeId above.
-pub const NUM_PREDEFINED_TYPES: usize = 52;
+pub const NUM_PREDEFINED_TYPES: usize = 53;
 
 // Resolved type ID constants (TypeId wrapped with GlobalLevel)
 pub const GLOBAL_UNKNOWN_ID: ResolvedTypeId = ResolvedTypeId::new(GLOBAL_LEVEL, UNKNOWN_ID);
@@ -273,3 +274,4 @@ pub const GLOBAL_SYMBOL_ASYNC_DISPOSE_ID: ResolvedTypeId =
 pub const GLOBAL_DISPOSABLE_ID: ResolvedTypeId = ResolvedTypeId::new(GLOBAL_LEVEL, DISPOSABLE_ID);
 pub const GLOBAL_ASYNC_DISPOSABLE_ID: ResolvedTypeId =
     ResolvedTypeId::new(GLOBAL_LEVEL, ASYNC_DISPOSABLE_ID);
+pub const GLOBAL_BOOLEAN_ID: ResolvedTypeId = ResolvedTypeId::new(GLOBAL_LEVEL, BOOLEAN_ID);

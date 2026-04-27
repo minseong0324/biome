@@ -74,6 +74,10 @@ const getterObj = { get code(): number { if (Math.random() > 0.5) return 200; re
 
 class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
 
+function partialBooleanUnion(b: boolean): boolean | null { if (b) return true; return null; }
+
+const ternaryBoolean = (b: boolean): boolean | "skip" => b ? true : false;
+
 ```
 
 # Diagnostics
@@ -796,10 +800,56 @@ invalid.ts:69:48 lint/nursery/noMisleadingReturnType ━━━━━━━━━
   > 69 │ class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
        │                                                ^^^^^^^^^^^^^^^^^
     70 │ 
+    71 │ function partialBooleanUnion(b: boolean): boolean | null { if (b) return true; return null; }
   
   i A wider return type hides the precise types that callers could rely on.
   
   i Consider using "loading" | "idle" as the return type.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:71:41 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    69 │ class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
+    70 │ 
+  > 71 │ function partialBooleanUnion(b: boolean): boolean | null { if (b) return true; return null; }
+       │                                         ^^^^^^^^^^^^^^^^
+    72 │ 
+    73 │ const ternaryBoolean = (b: boolean): boolean | "skip" => b ? true : false;
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
+  
+  i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.ts:73:36 lint/nursery/noMisleadingReturnType ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The return type annotation is wider than what the function actually returns.
+  
+    71 │ function partialBooleanUnion(b: boolean): boolean | null { if (b) return true; return null; }
+    72 │ 
+  > 73 │ const ternaryBoolean = (b: boolean): boolean | "skip" => b ? true : false;
+       │                                    ^^^^^^^^^^^^^^^^^^
+    74 │ 
+  
+  i A wider return type hides the precise types that callers could rely on.
+  
+  i Narrow the return type to match what the function actually returns.
   
   i This rule is still being actively worked on, so it may be missing features or have rough edges. Visit https://github.com/biomejs/biome/issues/9810 for more information or to report possible bugs.
   

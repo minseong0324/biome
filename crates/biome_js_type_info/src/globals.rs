@@ -100,6 +100,7 @@ pub fn global_type_name(id: TypeId) -> Option<&'static str> {
         DISPOSABLE_DISPOSE_ID => Some(DISPOSABLE_DISPOSE_ID_NAME),
         ASYNC_DISPOSABLE_ID => Some(ASYNC_DISPOSABLE_ID_NAME),
         ASYNC_DISPOSABLE_ASYNC_DISPOSE_ID => Some(ASYNC_DISPOSABLE_ASYNC_DISPOSE_ID_NAME),
+        BOOLEAN_ID => Some(BOOLEAN_ID_NAME),
         _ => None,
     }
 }
@@ -170,6 +171,7 @@ impl Default for GlobalsResolver {
         builder.set_type_data(CONDITIONAL_ID, TypeData::Conditional);
         builder.set_type_data(NUMBER_ID, TypeData::Number);
         builder.set_type_data(STRING_ID, TypeData::String);
+        builder.set_type_data(BOOLEAN_ID, TypeData::Boolean);
 
         // TODO(tidefield): Use biome parser to parse Typescript .d.ts files
         // and generate the following `TypeData`s as much as possible

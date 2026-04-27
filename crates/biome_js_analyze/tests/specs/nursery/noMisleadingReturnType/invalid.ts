@@ -67,3 +67,7 @@ class GetterClass { get code(): number { if (Math.random() > 0.5) return 200; re
 const getterObj = { get code(): number { if (Math.random() > 0.5) return 200; return 404; } };
 
 class AsyncMethod { async getStatus(b: boolean): Promise<string> { if (b) return "loading"; return "idle"; } }
+
+function partialBooleanUnion(b: boolean): boolean | null { if (b) return true; return null; }
+
+const ternaryBoolean = (b: boolean): boolean | "skip" => b ? true : false;

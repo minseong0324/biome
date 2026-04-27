@@ -142,17 +142,20 @@ impl Rule for UseExhaustiveSwitchCases {
         let mut missing_cases = Vec::new();
 
         let discriminant = stmt.discriminant().ok()?;
-        let discriminant_ty = flatten_type(&ctx.type_of_expression(&discriminant))?;
+
+        let is_switch_true_condition_group = is_true_literal_expression(&discriminant)
+            && found_cases.iter().any(|case| matches!(case, TypeData::Boolean));
+        if is_switch_true_condition_group {
+            return None;
+        }
 
         let has_boolean_case = |value: bool| {
-            found_cases.iter().any(|case| {
-                matches!(
-                    case,
-                    TypeData::Literal(lit)
-                        if matches!(lit.as_ref(), Literal::Boolean(b) if b.as_bool() == value)
-                )
-            })
+            found_cases
+                .iter()
+                .any(|case| is_boolean_literal_data_with_value(case, value))
         };
+
+        let discriminant_ty = flatten_type(&ctx.type_of_expression(&discriminant))?;
 
         let variants = match discriminant_ty.is_union() {
             true => Type::normalized_boolean_union_variants(
@@ -299,6 +302,23 @@ fn flatten_type(ty: &Type) -> Option<Type> {
         TypeData::TypeofType(inner) => ty.resolve(inner),
         _ => Some(ty.clone()),
     }
+}
+
+// A condition-group switch must use the literal `true`, not a boolean expression.
+fn is_true_literal_expression(expr: &AnyJsExpression) -> bool {
+    expr.as_any_js_literal_expression()
+        .and_then(|literal| literal.as_js_boolean_literal_expression())
+        .and_then(|literal| literal.value_token().ok())
+        .is_some_and(|token| token.kind() == T![true])
+}
+
+// Only boolean literal cases satisfy individual `true`/`false` variants.
+fn is_boolean_literal_data_with_value(ty: &TypeData, value: bool) -> bool {
+    matches!(
+        ty,
+        TypeData::Literal(lit)
+            if matches!(lit.as_ref(), Literal::Boolean(b) if b.as_bool() == value)
+    )
 }
 
 impl Display for MissingCase {

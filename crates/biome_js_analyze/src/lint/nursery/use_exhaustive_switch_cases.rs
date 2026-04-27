@@ -1,9 +1,12 @@
-use std::ops::Deref;
+use std::{io, ops::Deref};
 
 use biome_analyze::{
     FixKind, Rule, RuleDiagnostic, RuleDomain, RuleSource, context::RuleContext, declare_lint_rule,
 };
-use biome_console::markup;
+use biome_console::{
+    fmt::{Display, Formatter},
+    markup,
+};
 use biome_js_factory::make;
 use biome_js_syntax::{
     AnyJsCallArgument, AnyJsExpression, AnyJsStatement, AnyJsSwitchClause, JsSwitchStatement, T,
@@ -201,7 +204,7 @@ impl Rule for UseExhaustiveSwitchCases {
             .note("Some variants of the union type are not handled here.")
             .footer_list(
                 "These cases are missing:",
-                state.iter().map(missing_case_to_string),
+                state,
             ),
         )
     }
@@ -298,24 +301,33 @@ fn flatten_type(ty: &Type) -> Option<Type> {
     }
 }
 
-fn missing_case_to_string(case: &MissingCase) -> String {
-    match case {
-        MissingCase::Type(ty) => type_to_string(ty),
-        MissingCase::BooleanLiteral(value) => value.to_string(),
+impl Display for MissingCase {
+    fn fmt(&self, formatter: &mut Formatter) -> io::Result<()> {
+        match self {
+            Self::Type(case_type) => write_type(case_type, formatter),
+            Self::BooleanLiteral(value) => {
+                formatter.write_str(if *value { "true" } else { "false" })
+            }
+        }
     }
 }
 
-fn type_to_string(ty: &Type) -> String {
-    match ty.deref() {
-        TypeData::Literal(lit) => match lit.as_ref() {
-            Literal::Boolean(b) => b.as_bool().to_string(),
-            Literal::Number(n) => n.text().to_string(),
-            Literal::String(s) => format!("\"{}\"", s.as_str()),
-            _ => "unknown".to_string(),
+// Render directly into the diagnostic formatter to avoid a temporary `String`.
+fn write_type(case_type: &Type, formatter: &mut Formatter) -> io::Result<()> {
+    match case_type.deref() {
+        TypeData::Literal(literal) => match literal.as_ref() {
+            Literal::Boolean(boolean) => {
+                formatter.write_str(if boolean.as_bool() { "true" } else { "false" })
+            }
+            Literal::Number(number) => formatter.write_str(number.as_str()),
+            Literal::String(string) => {
+                formatter.write_fmt(format_args!("\"{}\"", string.as_str()))
+            }
+            _ => formatter.write_str("unknown"),
         },
-        TypeData::Null => "null".to_string(),
-        TypeData::Undefined => "undefined".to_string(),
-        _ => "unknown".to_string(),
+        TypeData::Null => formatter.write_str("null"),
+        TypeData::Undefined => formatter.write_str("undefined"),
+        _ => formatter.write_str("unknown"),
     }
 }
 

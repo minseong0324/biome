@@ -719,9 +719,10 @@ fn object_literal_has_any_member(expression: &AnyJsExpression) -> bool {
     }
 }
 
-/// Whether the expression has a cast whose target is strictly narrower
-/// than `object`. Walks parens and ternary branches, mirroring
-/// [`has_object_keyword_assertion`].
+/// Returns `true` when the expression contains a cast whose target is
+/// strictly narrower than the `object` keyword. The walk descends through
+/// parentheses and both branches of a ternary; `false` means no narrow cast
+/// was found in any branch.
 fn has_narrow_cast(expression: &AnyJsExpression) -> bool {
     let mut stack = vec![expression.clone().omit_parentheses()];
     while let Some(current) = stack.pop() {
